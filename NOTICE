@@ -1,0 +1,15 @@
+Third-party reference documentation
+=================================
+
+The files under `templates/databases/` are adapted from:
+
+  K-Dense-AI / scientific-agent-skills
+  https://github.com/K-Dense-AI/scientific-agent-skills
+  skills/database-lookup/references/
+
+Copyright (c) 2025 K-Dense Inc.
+Licensed under the MIT License.
+
+The surrounding dsh-sci database catalog, HTTP handlers, CLI, prompts, and
+protocol text are original work for this plugin. Database responses remain
+subject to each provider's own terms, licenses, and attribution requirements.

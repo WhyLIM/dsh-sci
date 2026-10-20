@@ -1,0 +1,12 @@
+# dsh-sci —— DSH bundle patch
+#
+# 安装（本地开发）：
+#   plugin_manager install_bundle target=/绝对路径/dsh-sci
+# 安装后：
+#   设置 → 科研
+#   固定会话 dsh-sci 会在作息时间被叫醒
+#
+# name 必须与 package.json 的包名一致（dsh-sci）。
+- insert:
+    - id: dsh-sci
+      name: dsh-sci

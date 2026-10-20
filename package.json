@@ -1,0 +1,74 @@
+{
+  "name": "dsh-sci",
+  "version": "0.8.9",
+  "private": true,
+  "description": "让 DSH 像生物医学博士生一样检索、阅读开放获取期刊文献：PICO/PubMed/Europe PMC、研究类型与撤稿安全、表格/图、结构化笔记、引文追踪、筛选与导出。 含 50+ 生物信息数据库 lookup、实体接地、组学文件检查与计算类笔记。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "research",
+    "literature",
+    "papers",
+    "biomedical",
+    "pubmed",
+    "openalex",
+    "arxiv",
+    "europepmc",
+    "bioinformatics",
+    "omics",
+    "database-lookup",
+    "gene",
+    "variant"
+  ],
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.png",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "scheduler.js",
+    "cordis.patch.yml",
+    "tools",
+    "templates",
+    "icon.png",
+    "locale/*.json",
+    "README.md",
+    "NOTICE",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "deps": "node tools/sci.mjs deps"
+  },
+  "license": "MIT",
+  "icon": "./icon.png",
+  "engines": {
+    "node": ">=22"
+  },
+  "author": "Min Li",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WhyLIM/dsh-sci.git"
+  },
+  "homepage": "https://github.com/WhyLIM/dsh-sci#readme",
+  "bugs": {
+    "url": "https://github.com/WhyLIM/dsh-sci/issues"
+  }
+}

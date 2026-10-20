@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+._*
+
+# Local test / scratch data
+.tmp/
+tmp/
+scratch/
+
+# Dependencies
+node_modules/
+
+# Secrets / local configuration
+.env
+.env.*
+*.local
+*.secrets.json
+sci.config.json
+sci.secrets.json
+
+# Logs / coverage
+*.log
+coverage/
+.nyc_output/
+
+# Editor
+.vscode/
+.idea/
