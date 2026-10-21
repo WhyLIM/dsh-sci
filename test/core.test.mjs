@@ -372,6 +372,7 @@ test('database grounding candidates are explicit/ID based', () => {
   assert.ok(md.diseases.includes('Myocardial Infarction'))
   assert.ok(md.diseases.includes('heart failure'))
   assert.deepEqual(md.drugs, ['aspirin'])
+  assert.ok(extractCandidates({ text: 'We studied myocardial infarction and heart failure.' }).diseases.includes('myocardial infarction'))
 })
 
 test('classify input forms', () => {

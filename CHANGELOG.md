@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.5
+
+- Add full-text disease candidate extraction with database verification.
+- Clarify database pagination and dataset download limits.
+
 ## 0.9.4
 
 - Add Nextflow/Snakemake/WDL inspection, validation and guarded execution.

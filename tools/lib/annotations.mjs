@@ -29,6 +29,7 @@ const ACC = [
 
 function uniq(xs) { return [...new Set(xs.filter(Boolean))] }
 function explicitList(x) { return String(x ?? '').split(/[,;，]/).map((v) => v.trim()).filter(Boolean) }
+function dedupeCI(xs) { const seen = new Set(); return xs.filter((x) => { const k = String(x).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true }) }
 function cacheFile(key) { return path.join(PATHS.annotations, `${key}.json`) }
 function hashKey(s) { return crypto.createHash('sha1').update(String(s)).digest('hex').slice(0, 16) }
 
@@ -44,7 +45,12 @@ export function extractCandidates({ text = '', title = '', keywords = [], genes 
   }
   const candidates = uniq([...explicit, ...tokens]).slice(0, 12)
   const diseaseRe = /\b(disease|syndrome|disorder|cancer|carcinoma|neoplas|tumou?r|infection|deficiency|failure|injury|fibrosis|diabetes|hypertension|stroke|asthma|arthritis|dementia|sepsis|malaria|tuberculosis|infarction|ischemia|ischaemia|haemorrhage|hemorrhage|edema|oedema|lesion)\b/i
-  const diseaseHints = uniq([...explicitList(diseases), ...(mesh ?? []).filter((m) => diseaseRe.test(String(m)))]).slice(0, 4)
+  const diseasePhrase = /\b([A-Za-z][A-Za-z0-9-]*(?:\s+[A-Za-z0-9-]+){0,3}\s+(?:disease|syndrome|disorder|cancer|carcinoma|neoplas[ia]?|tumou?r|infection|deficiency|failure|injury|fibrosis|diabetes|hypertension|stroke|asthma|arthritis|dementia|sepsis|malaria|tuberculosis|infarction|ischemia|ischaemia|haemorrhage|hemorrhage|edema|oedema|lesion))\b/gi
+  const stripDiseasePrefix = /^(?:(?:we|the|a|an|this|that|these|those|and|or|of|in|with|for|to|from|after|before|during|among|patients?|subjects?|studied|study|studies|showed|found|including|associated|risk)\s+)+/i
+  const textDiseases = [...`${title}\n${text}`.matchAll(diseasePhrase)]
+    .map((m) => m[1].trim().replace(stripDiseasePrefix, '').trim())
+    .filter((x) => x && x.length <= 80 && !/^(the|a|an|this|that|these|those|patients?|subjects?|disease|syndrome)\b/i.test(x))
+  const diseaseHints = dedupeCI([...explicitList(diseases), ...(mesh ?? []).filter((m) => diseaseRe.test(String(m))), ...textDiseases]).slice(0, 4)
   const drugHints = uniq(explicitList(drugs)).slice(0, 4)
   const accessions = []
   for (const [db, re] of ACC) for (const m of body.match(re) ?? []) accessions.push({ db, id: m.toUpperCase() })
