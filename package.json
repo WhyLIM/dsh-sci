@@ -1,6 +1,6 @@
 {
   "name": "dsh-sci",
-  "version": "0.8.9",
+  "version": "0.9.1",
   "private": true,
   "description": "让 DSH 像生物医学博士生一样检索、阅读开放获取期刊文献：PICO/PubMed/Europe PMC、研究类型与撤稿安全、表格/图、结构化笔记、引文追踪、筛选与导出。 含 50+ 生物信息数据库 lookup、实体接地、组学文件检查与计算类笔记。",
   "keywords": [
@@ -55,7 +55,8 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "deps": "node tools/sci.mjs deps"
+    "deps": "node tools/sci.mjs deps",
+    "test:live": "DSH_SCI_LIVE_TESTS=1 node --test test/live-db.test.mjs"
   },
   "license": "MIT",
   "icon": "./icon.png",

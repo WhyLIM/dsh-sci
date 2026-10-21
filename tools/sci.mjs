@@ -21,6 +21,7 @@ const OPTIONS = {
   query: { type: 'string' },
   days: { type: 'string' },
   limit: { type: 'string' },
+  page: { type: 'string' },
   source: { type: 'string' },
   'oa-only': { type: 'boolean' },
   'no-oa': { type: 'boolean' },
@@ -115,7 +116,7 @@ const OPTIONS = {
 }
 
 function help() {
-  console.log(`dsh-sci · 像博士生一样检索、阅读、记笔记
+  console.log(`dsh-sci · 生物医学文献检索与阅读
 
 用法：node sci.mjs <command> [options]
 
@@ -155,6 +156,7 @@ function help() {
 常用参数：
   --days 14           时间窗（默认取配置）
   --limit 10          每个源取多少
+  --page 2            数据库搜索翻页（ChEBI / DailyMed）
   --source europepmc,pubmed,openalex
   --oa-only           发现阶段只要开放获取（默认按配置；阅读阶段始终 OA）
   --no-cache          绕过本地缓存
@@ -190,7 +192,7 @@ async function main() {
     strict: false,
   })
   if (values.version) {
-    console.log('dsh-sci 0.8.9')
+    console.log('dsh-sci 0.9.1')
     return 0
   }
   const cmd = positionals[0]

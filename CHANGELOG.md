@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0
+
+- Add public database handlers for ClinPGx, ChEBI and DailyMed.
+- Add HGVS-to-ClinVar grounding and report unresolved HGVS.
+- Add DB search paging, source/access provenance and opt-in live contract tests.
+- Add BAM/CRAM/HDF5/BigWig header checks.
+- Mark LINCS L1000 as key-required; record unavailable RegulomeDB/ZINC endpoints.
+
 ## 0.8.9
 
 - Separate manual and DSH-native automatic schedules.

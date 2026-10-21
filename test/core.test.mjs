@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import zlib from 'node:zlib'
 
 import {
   invertedToText, normalizeTitle, titleKey, dedupePapers, scorePaper,
@@ -16,7 +17,7 @@ import { buildPubmedQuery } from '../tools/lib/sources/pubmed.mjs'
 import { noteScaffold } from '../tools/lib/library.mjs'
 import { toBibtex } from '../tools/lib/exporters.mjs'
 import { redactPHI } from '../tools/lib/privacy.mjs'
-import { DATABASES, getDatabase, databaseHelp } from '../tools/lib/databases.mjs'
+import { DATABASES, getDatabase, databaseHelp, normalizeClinpgx, normalizeChebiDoc, normalizeChebiCompound, normalizeDailymed } from '../tools/lib/databases.mjs'
 import { PUBMED_FIELDS, normalizePubmedQuery } from '../tools/lib/sources/pubmed-fields.mjs'
 import { extractRepro } from '../tools/lib/repro.mjs'
 import { qcText } from '../tools/lib/qc.mjs'
@@ -217,10 +218,15 @@ test('output/execution/topics/source options sanitize', () => {
 
 test('bioinformatics database catalog is unique and aliased', () => {
   assert.ok(DATABASES.length >= 45)
+  assert.equal(DATABASES.filter((d) => d.executable).length, 42)
   assert.equal(new Set(DATABASES.map((d) => d.id)).size, DATABASES.length)
   assert.equal(getDatabase('hpa')?.id, 'human-protein-atlas')
   assert.equal(getDatabase('gdc')?.id, 'tcga-gdc')
   assert.equal(databaseHelp('uniprot')?.executable, true)
+  assert.equal(databaseHelp('clinpgx')?.executable, true)
+  assert.equal(databaseHelp('chebi')?.executable, true)
+  assert.equal(databaseHelp('dailymed')?.executable, true)
+  assert.equal(databaseHelp('lincs-l1000')?.auth, 'key')
   assert.equal(databaseHelp('omim')?.executable, false)
   assert.ok(DATABASES.every((d) => d.doc.endsWith('.md')))
 })
@@ -251,6 +257,41 @@ test('bioinformatics P0-P2 primitives', async () => {
   assert.equal(o.kind, 'vcf')
   assert.equal(o.build, 'GRCh38')
   assert.equal(o.samples, 0)
+
+  const cram = path.join(dir, 'test.cram')
+  fs.writeFileSync(cram, Buffer.from([0x43, 0x52, 0x41, 0x4d, 3, 0, 0, 0]))
+  assert.equal((await inspectOmics(cram)).kind, 'cram')
+
+  const h5 = path.join(dir, 'test.h5ad')
+  fs.writeFileSync(h5, Buffer.from([0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a]))
+  assert.equal((await inspectOmics(h5)).kind, 'h5ad')
+
+  const header = Buffer.from('@HD\tVN:1.6\n@SQ\tSN:chr1\tLN:1000\n')
+  const bam = Buffer.alloc(8 + header.length)
+  bam.write('BAM\u0001', 0, 'latin1')
+  bam.writeInt32LE(header.length, 4)
+  header.copy(bam, 8)
+  const bamFile = path.join(dir, 'test.bam')
+  fs.writeFileSync(bamFile, zlib.gzipSync(bam))
+  const bi = await inspectOmics(bamFile)
+  assert.equal(bi.kind, 'bam')
+  assert.equal(bi.referenceCount, 1)
+})
+
+test('public database normalizers keep verified fields', () => {
+  const g = normalizeClinpgx({ data: [{ objCls: 'Gene', id: 'PA128', symbol: 'CYP2D6', name: 'cytochrome P450 family 2 subfamily D member 6', chr: { name: 'chr22' }, buildVersion: 'GRCh38.p7', cpicGene: true }] })
+  assert.equal(g[0].symbol, 'CYP2D6')
+  assert.equal(g[0].chromosome, 'chr22')
+  assert.equal(g[0].cpic, true)
+
+  const c = normalizeChebiDoc({ obo_id: 'CHEBI:15365', label: 'aspirin', description: ['A benzoic acid.'], exact_synonyms: ['ASA'] })
+  assert.equal(c.id, 'CHEBI:15365')
+  assert.equal(c.synonyms[0], 'ASA')
+  assert.equal(normalizeChebiCompound({ id: 15365, chebi_accession: 'CHEBI:15365', name: 'acetylsalicylic acid', stars: 3 }).stars, 3)
+
+  const d = normalizeDailymed({ setid: 'abc', title: 'METFORMIN', published_date: 'Oct 19, 2026', spl_version: 3 })
+  assert.equal(d.setid, 'abc')
+  assert.equal(d.version, 3)
 })
 
 test('database grounding candidates are explicit/ID based', () => {
@@ -259,6 +300,9 @@ test('database grounding candidates are explicit/ID based', () => {
   assert.equal(c.genes.includes('EGFR'), true)
   assert.equal(c.accessions.some((x) => x.db === 'geo' && x.id === 'GSE12345'), true)
   assert.equal(c.rsids.includes('rs334'), true)
+  const h = extractCandidates({ text: 'NM_000546.6:c.818G>A and chr17:7675087 A>G' })
+  assert.equal(h.hgvs[0], 'NM_000546.6:c.818G>A')
+  assert.equal(h.genomic.length > 0, true)
 })
 
 test('classify input forms', () => {

@@ -94,7 +94,7 @@ const META = [
   ['gnomad', 'gnomAD', 'variant', 'none', true, ['search', 'get'], 'https://gnomad.broadinstitute.org/api', '群体频率；必须匹配基因组版本和等位基因'],
   ['myvariant', 'MyVariant.info', 'variant', 'none', true, ['search', 'get'], 'https://myvariant.info/v1', '变异注释聚合；注意底层模型/版本'],
   ['gwas-catalog', 'GWAS Catalog', 'variant', 'none', true, ['search', 'get'], 'https://www.ebi.ac.uk/gwas/rest/api', 'GWAS SNP-trait 关联'],
-  ['clinpgx', 'ClinPGx', 'variant', 'none', false, ['info'], 'https://www.clinpgx.org', '药物基因组学；需按参考文档访问'],
+  ['clinpgx', 'ClinPGx', 'variant', 'none', true, ['search', 'get'], 'https://api.clinpgx.org/v1', '药物基因组学；基因/化学实体和 summary annotation'],
   ['omim', 'OMIM', 'disease', 'key', false, ['info'], 'https://api.omim.org/api', '孟德尔疾病-基因；需要 OMIM API key'],
   ['disgenet', 'DisGeNET', 'disease', 'key', false, ['info'], 'https://www.disgenet.com', '基因-疾病关联；需要授权'],
   ['hpo', 'HPO', 'disease', 'none', true, ['search', 'get'], 'https://ontology.jax.org/api/hp', '表型本体、术语层级'],
@@ -107,7 +107,7 @@ const META = [
   ['biogrid', 'BioGRID', 'pathway', 'key', false, ['info'], 'https://webservice.thebiogrid.org', '遗传/物理互作；需要 access key'],
   ['jaspar', 'JASPAR', 'pathway', 'none', true, ['search', 'get'], 'https://jaspar.elixir.no/api/v1', '转录因子结合 motif'],
   ['encode', 'ENCODE', 'pathway', 'none', true, ['search', 'get'], 'https://www.encodeproject.org', 'ChIP/ATAC/RNA 实验与文件'],
-  ['regulomedb', 'RegulomeDB', 'pathway', 'none', false, ['info'], 'https://regulomedb.org', '非编码调控证据；按参考文档访问'],
+  ['regulomedb', 'RegulomeDB', 'pathway', 'none', false, ['info'], 'https://regulomedb.org', '非编码调控证据；官方 JSON 端点当前返回网页，暂不自动查询'],
   ['geo', 'NCBI GEO', 'expression', 'optional', true, ['search', 'get'], 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/', '基因表达数据集；GSE/GDS'],
   ['sra', 'NCBI SRA', 'expression', 'optional', true, ['search', 'get'], 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/', '测序 run/experiment 元数据；XML'],
   ['ena', 'ENA', 'expression', 'none', true, ['search', 'get'], 'https://www.ebi.ac.uk/ena/portal/api', '欧洲核苷酸档案；read_run/sequence/study'],
@@ -116,15 +116,15 @@ const META = [
   ['hca', 'Human Cell Atlas', 'expression', 'none', true, ['search'], 'https://service.azul.data.humancellatlas.org', '单细胞图谱项目；先选 catalog'],
   ['pride', 'PRIDE', 'expression', 'none', true, ['search', 'get'], 'https://www.ebi.ac.uk/pride/ws/archive/v3', '蛋白质组学项目/文件'],
   ['metabolomics-workbench', 'Metabolomics Workbench', 'expression', 'none', true, ['search', 'get'], 'https://www.metabolomicsworkbench.org/rest', '代谢组学研究/代谢物'],
-  ['lincs-l1000', 'LINCS L1000', 'expression', 'none', false, ['info'], 'https://clue.io', '表达签名；需按参考文档访问'],
+  ['lincs-l1000', 'LINCS L1000', 'expression', 'key', false, ['info'], 'https://clue.io', '表达签名；Clue.io API 需要 key'],
   ['pubchem', 'PubChem', 'chemistry', 'none', true, ['search', 'get'], 'https://pubchem.ncbi.nlm.nih.gov/rest/pug', '化合物身份/属性；优先 CID/InChIKey'],
   ['chembl', 'ChEMBL', 'chemistry', 'none', true, ['search', 'get'], 'https://www.ebi.ac.uk/chembl/api/data', '生物活性、药物、靶点'],
   ['bindingdb', 'BindingDB', 'chemistry', 'none', true, ['get'], 'https://bindingdb.org/rest', '蛋白-配体结合亲和力；按 UniProt'],
   ['drugbank', 'DrugBank', 'chemistry', 'key', false, ['info'], 'https://api.drugbank.com', '药物-靶点-机制；需要授权'],
-  ['chebi', 'ChEBI', 'chemistry', 'none', false, ['info'], 'https://www.ebi.ac.uk/chebi', '生物相关化学实体本体'],
-  ['zinc', 'ZINC', 'chemistry', 'none', false, ['info'], 'https://zinc.docking.org', '可购买化合物/对接库'],
+  ['chebi', 'ChEBI', 'chemistry', 'none', true, ['search', 'get'], 'https://www.ebi.ac.uk/chebi/backend/api/public', '生物相关化学实体本体；OLS4 搜索 + ChEBI REST'],
+  ['zinc', 'ZINC', 'chemistry', 'none', false, ['info'], 'https://zinc.docking.org', '可购买化合物/对接库；自动请求会触发人机验证'],
   ['brenda', 'BRENDA', 'chemistry', 'key', false, ['info'], 'https://www.brenda-enzymes.org', '酶动力学；学术授权'],
-  ['dailymed', 'DailyMed', 'chemistry', 'none', false, ['info'], 'https://dailymed.nlm.nih.gov', '药品说明书；按参考文档访问'],
+  ['dailymed', 'DailyMed', 'chemistry', 'none', true, ['search', 'get'], 'https://dailymed.nlm.nih.gov/dailymed/services/v2', 'FDA 药品说明书；SPL setid/名称/NDC'],
   ['cosmic', 'COSMIC', 'cancer', 'login', false, ['info'], 'https://cancer.sanger.ac.uk/cosmic', '体细胞突变；需要登录/授权'],
   ['cbioportal', 'cBioPortal', 'cancer', 'none', true, ['search', 'get'], 'https://www.cbioportal.org/api', '癌症研究突变/临床数据'],
   ['tcga-gdc', 'GDC / TCGA', 'cancer', 'none', true, ['search', 'get'], 'https://api.gdc.cancer.gov', 'TCGA 项目/病例/SSM 元数据'],
@@ -598,13 +598,140 @@ async function clinicaltrials(q, o, mode) {
   return ok('clinicaltrials', 'search', { query: q, total: d.totalCount ?? 0, items: arr(d.studies).map((s) => ({ id: s.protocolSection?.identificationModule?.nctId, title: s.protocolSection?.identificationModule?.briefTitle, status: s.protocolSection?.statusModule?.overallStatus, phase: s.protocolSection?.designModule?.phases })) })
 }
 
+// ── ClinPGx ────────────────────────────────────────────────────────────────
+function clinpgxGene(x) {
+  if (!x) return null
+  return {
+    type: 'gene', id: x.id, symbol: x.symbol, name: x.name,
+    chromosome: x.chr?.name, cytoband: [x.cbStart, x.cbStop].filter(Boolean).join('-'),
+    build: x.buildVersion, strand: x.strand, cpic: x.cpicGene === true,
+  }
+}
+function clinpgxChemical(x) {
+  if (!x) return null
+  return { type: 'chemical', id: x.id, name: x.name, objCls: x.objCls }
+}
+export function normalizeClinpgx(data) {
+  return arr(data?.data ?? data).map((x) => x?.objCls === 'Chemical' || x?.smiles || x?.inchi ? clinpgxChemical(x) : clinpgxGene(x)).filter(Boolean)
+}
+async function clinpgx(q, o, mode) {
+  const base = 'https://api.clinpgx.org/v1'
+  const limit = clamp(o.limit, 1, 50, 10)
+  if (mode === 'get' || /^PA\d+$/i.test(String(q))) {
+    const id = String(q).trim()
+    try {
+      const d = await getJson(`${base}/data/gene/${enc(id)}`, { cacheTtlMs: 7 * 864e5 })
+      const items = normalizeClinpgx(d)
+      if (items.length) return ok('clinpgx', 'get', { items, query: q })
+    } catch {}
+    try {
+      const d = await getJson(`${base}/data/chemical/${enc(id)}`, { cacheTtlMs: 7 * 864e5 })
+      const items = normalizeClinpgx(d)
+      if (items.length) return ok('clinpgx', 'get', { items, query: q })
+    } catch {}
+    try {
+      const d = await getJson(`${base}/data/chemical?name=${enc(id)}`, { cacheTtlMs: 7 * 864e5 })
+      const items = normalizeClinpgx(d)
+      if (items.length) return ok('clinpgx', 'get', { items: items.slice(0, limit), query: q })
+    } catch {}
+    throw new Error(`ClinPGx 未找到 ${id}`)
+  }
+  const qs = String(q).trim()
+  let items = []
+  let kind = 'gene'
+  try {
+    const d = await getJson(`${base}/data/gene?symbol=${enc(qs)}`, { cacheTtlMs: 7 * 864e5 })
+    items = normalizeClinpgx(d)
+  } catch {}
+  if (!items.length) {
+    kind = 'chemical'
+    try {
+      const d = await getJson(`${base}/data/chemical?name=${enc(qs)}`, { cacheTtlMs: 7 * 864e5 })
+      items = normalizeClinpgx(d)
+    } catch {}
+  }
+  return ok('clinpgx', 'search', { query: q, kind, total: items.length, items: items.slice(0, limit) })
+}
+
+// ── ChEBI ──────────────────────────────────────────────────────────────────
+function chebiNumber(q) {
+  const m = String(q ?? '').trim().match(/^(?:CHEBI[:_])?(\d+)$/i)
+  return m ? m[1] : ''
+}
+export function normalizeChebiDoc(x) {
+  if (!x) return null
+  return {
+    id: x.obo_id ?? x.short_form ?? x.id, name: x.label ?? x.name,
+    definition: clean(arr(x.description)[0] ?? x.definition ?? ''),
+    synonyms: uniq([...arr(x.exact_synonyms), ...arr(x.related_synonyms), ...arr(x.synonyms)]).slice(0, 20),
+    iri: x.iri ?? '', ontology: x.ontology_name ?? 'chebi',
+  }
+}
+export function normalizeChebiCompound(x) {
+  if (!x) return null
+  return {
+    id: x.chebi_accession ?? (x.id ? `CHEBI:${x.id}` : ''), name: x.name ?? x.ascii_name,
+    definition: clean(x.definition ?? ''),
+    stars: x.stars ?? null,
+    synonyms: arr(x.names?.SYNONYM).map((v) => v?.name).filter(Boolean).slice(0, 20),
+  }
+}
+async function chebiSearch(q, limit, page = 1) {
+  const rows = Math.max(page * limit * 5, 20)
+  const d = await getJson(`https://www.ebi.ac.uk/ols4/api/search?q=${enc(q)}&ontology=chebi&rows=${rows}`, { cacheTtlMs: 7 * 864e5 })
+  const ql = String(q).trim().toLowerCase()
+  const rank = (x) => x.name.toLowerCase() === ql ? 0
+    : x.synonyms.some((s) => String(s).toLowerCase() === ql) ? 1
+      : x.name.toLowerCase().startsWith(ql) ? 2 : 3
+  const docs = arr(d.response?.docs).map(normalizeChebiDoc).filter(Boolean).sort((a, b) => rank(a) - rank(b))
+  const start = (page - 1) * limit
+  return { total: d.response?.numFound ?? docs.length, items: docs.slice(start, start + limit) }
+}
+async function chebi(q, o, mode) {
+  const limit = clamp(o.limit, 1, 50, 10)
+  const numeric = chebiNumber(q)
+  if (mode === 'get' || numeric) {
+    let id = numeric
+    if (!id) {
+      const s = await chebiSearch(q, 1, 1)
+      id = chebiNumber(s.items[0]?.id)
+    }
+    if (!id) throw new Error('ChEBI 需要 CHEBI:ID 或可搜索的名称')
+    const d = await getJson(`https://www.ebi.ac.uk/chebi/backend/api/public/compound/${enc(id)}/`, { cacheTtlMs: 7 * 864e5 })
+    return ok('chebi', 'get', { items: [normalizeChebiCompound(d)].filter(Boolean), query: q })
+  }
+  const r = await chebiSearch(q, limit, clamp(o.page, 1, 1000, 1))
+  return ok('chebi', 'search', { query: q, total: r.total, items: r.items })
+}
+
+// ── DailyMed ───────────────────────────────────────────────────────────────
+export function normalizeDailymed(x) {
+  if (!x) return null
+  return {
+    setid: x.setid, title: x.title, publishedDate: x.published_date,
+    version: x.spl_version ?? null,
+  }
+}
+async function dailymed(q, o, mode) {
+  const limit = clamp(o.limit, 1, 50, 10)
+  const value = String(q ?? '').trim()
+  const isSetid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  if (mode === 'get' || isSetid) {
+    const query = isSetid ? `setid=${enc(value)}` : `drug_name=${enc(value.replace(/^setid:/i, ''))}`
+    const d = await getJson(`https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?${query}&pagesize=${limit}`, { cacheTtlMs: 7 * 864e5 })
+    return ok('dailymed', 'get', { items: arr(d.data).map(normalizeDailymed).filter(Boolean).slice(0, 1), query: value })
+  }
+  const d = await getJson(`https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json?drug_name=${enc(value)}&pagesize=${limit}&page=${clamp(o.page, 1, 1000, 1)}`, { cacheTtlMs: 7 * 864e5 })
+  return ok('dailymed', 'search', { query: value, total: d.metadata?.total_elements ?? arr(d.data).length, items: arr(d.data).map(normalizeDailymed).filter(Boolean) })
+}
+
 const HANDLERS = {
   uniprot, 'ncbi-gene': ncbiGene, 'ncbi-protein': ncbiProtein, 'ncbi-taxonomy': ncbiTaxonomy,
   ensembl, geo, sra, ena, clinvar, dbsnp, gnomad, pdb, alphafold, interpro, emdb, reactome, kegg,
   quickgo, string: stringDb, pubchem, chembl, bindingdb, hpo, 'gwas-catalog': gwas,
   cbioportal, 'tcga-gdc': gdc, pride, encode, hca, gtex, 'human-protein-atlas': hpa,
   myvariant, jaspar, 'metabolomics-workbench': metabolomics, monarch, mousemine, 'ucsc-genome': ucsc,
-  clinicaltrials, opentargets,
+  clinicaltrials, opentargets, clinpgx, chebi, dailymed,
 }
 
 export function detectAccessionDb(id) {
@@ -653,6 +780,6 @@ export function databaseProvenance(db, opts = {}) {
     organismTaxId: taxon(opts.species) || null,
     genomeBuild: opts.build || null,
     dataset: opts.dataset || null,
-    filters: { query: opts.query ?? null, identifier: opts.id ?? null, action: opts.action ?? null, limit: opts.limit ?? null },
+    filters: { query: opts.query ?? null, identifier: opts.id ?? null, action: opts.action ?? null, limit: opts.limit ?? null, page: opts.page ?? null },
   }
 }

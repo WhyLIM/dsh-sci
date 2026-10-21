@@ -10,6 +10,7 @@
 
 ```bash
 npm test
+DSH_SCI_LIVE_TESTS=1 npm run test:live
 npm run deps
 ```
 

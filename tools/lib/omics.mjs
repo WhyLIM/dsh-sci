@@ -52,6 +52,47 @@ function detectDirectory(dir) {
   return null
 }
 
+function gunzipSample(file, maxBytes = 256 * 1024) {
+  return new Promise((resolve) => {
+    const chunks = []
+    const st = fs.createReadStream(file, { start: 0, end: maxBytes - 1 })
+    const gz = zlib.createGunzip()
+    let settled = false
+    const done = (v) => { if (!settled) { settled = true; resolve(v) } }
+    st.on('error', () => done(null))
+    gz.on('error', () => done(chunks.length ? Buffer.concat(chunks) : null))
+    gz.on('data', (d) => { chunks.push(d); if (Buffer.concat(chunks).length >= 64 * 1024) { done(Buffer.concat(chunks)); st.destroy(); gz.destroy() } })
+    gz.on('end', () => done(Buffer.concat(chunks)))
+    st.pipe(gz)
+  })
+}
+
+async function binaryInfo(file, ext, base) {
+  const head = readSample(file, 16)
+  const raw = path.extname(file).toLowerCase()
+  if (raw === '.cram' || head.subarray(0, 4).toString('latin1') === 'CRAM') {
+    return { ...base, ok: true, kind: 'cram', version: `${head[4]}.${head[5]}`, warnings: [...base.warnings, 'CRAM 只读取了文件头；请用 samtools 校验索引和参考序列。'] }
+  }
+  if (raw === '.bam' || ext === '.bam') {
+    const headBuf = await gunzipSample(file)
+    if (!headBuf || headBuf.subarray(0, 4).toString('latin1') !== 'BAM\u0001') {
+      return { ...base, ok: true, kind: 'bam', warnings: [...base.warnings, 'BAM 无法解压或不是 BAM 格式；请用 samtools quickcheck。'] }
+    }
+    const lText = headBuf.readInt32LE(4)
+    const text = lText > 0 && lText <= headBuf.length - 8 ? headBuf.subarray(8, 8 + lText).toString('utf8') : ''
+    const refs = (text.match(/^@SQ\t/gm) ?? []).length
+    return { ...base, ok: true, kind: 'bam', header: text.split('\n').slice(0, 8), referenceCount: refs, warnings: [...base.warnings, ...(refs ? [] : ['BAM header 未发现 @SQ；参考序列信息不完整。'])] }
+  }
+  if (ext === '.h5' || ext === '.hdf5' || ext === '.h5ad' || head.subarray(0, 8).equals(Buffer.from([0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { ...base, ok: true, kind: ext === '.h5ad' ? 'h5ad' : 'hdf5', warnings: [...base.warnings, '只确认 HDF5 文件签名；未解析 h5ad 的 obs/var/shape，请用 anndata/h5py 校验。'] }
+  }
+  const magic = head.readUInt32LE(0)
+  if (ext === '.bw' || ext === '.bigwig' || magic === 0x888ffc26) {
+    return { ...base, ok: true, kind: 'bigwig', warnings: [...base.warnings, '只确认 BigWig 文件签名；未解析染色体和区间。'] }
+  }
+  return { ...base, ok: true, kind: ext.replace('.', ''), magic: head.toString('hex'), warnings: [...base.warnings, '二进制格式未解析；请用专用工具验证。'] }
+}
+
 export async function inspectOmics(file, { expectedBuild = '' } = {}) {
   const abs = path.resolve(String(file))
   const st = fs.statSync(abs)
@@ -66,8 +107,7 @@ export async function inspectOmics(file, { expectedBuild = '' } = {}) {
   const base = { path: abs, size: st.size, ext, sha256: await sha256(abs), warnings: [] }
   if (st.size > 500 * 1024 * 1024) base.warnings.push('文件超过 500 MB；只读取头部样本，未做全量校验。')
   if (BIN_EXT.has(ext) || rawExt === '.bam' || rawExt === '.cram') {
-    const magic = readSample(abs, 16)
-    return { ...base, ok: true, kind: ext.replace('.', ''), magic: magic.toString('hex'), warnings: [...base.warnings, '二进制格式未解析；请用 samtools/bcftools/h5py 等验证。'] }
+    return binaryInfo(abs, ext, base)
   }
   const text = textOf(abs)
   if (!text) return { ...base, ok: true, kind: 'binary/unknown', warnings: [...base.warnings, '无法作为文本读取；未解析。'] }

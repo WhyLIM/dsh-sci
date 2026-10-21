@@ -60,6 +60,7 @@ export async function run({ values, positionals }) {
 
   const opts = {
     limit: intArg(values.limit, 10, 1, 50),
+    page: intArg(values.page, 1, 1, 1000),
     species: values.species ?? '',
     build: values.build ?? '',
     dataset: values.dataset ?? '',
@@ -75,7 +76,8 @@ export async function run({ values, positionals }) {
     const result = await databaseSearch(dbId, query, opts)
     if (values.json) { process.stdout.write(JSON.stringify({ ...result, provenance: databaseProvenance(db, { ...opts, query }) }, null, 2) + '\n'); return result.ok ? 0 : 1 }
     if (!result.ok) { console.error(`✗ ${result.error}`); return 1 }
-    console.log(`# ${db.name} · ${result.mode} · ${query}`)
+    console.log(`# ${db.name} · ${result.mode} · ${query}${opts.page > 1 ? ` · 第 ${opts.page} 页` : ''}`)
+    console.log(`来源：${databaseProvenance(db, { ...opts, query }).endpoint} · 访问：${result.checkedAt ?? new Date().toISOString()}`)
     if (result.total != null) console.log(`命中：${result.total}`)
     if (result.gene) console.log(`基因：${compact(result.gene)}`)
     for (const [i, item] of (result.items ?? []).entries()) {
@@ -90,6 +92,7 @@ export async function run({ values, positionals }) {
     if (values.json) { process.stdout.write(JSON.stringify({ ...result, provenance: databaseProvenance(db, { ...opts, id: identifier }) }, null, 2) + '\n'); return result.ok ? 0 : 1 }
     if (!result.ok) { console.error(`✗ ${result.error}`); return 1 }
     console.log(`# ${db.name} · ${result.mode} · ${identifier}`)
+    console.log(`来源：${databaseProvenance(db, { ...opts, id: identifier }).endpoint} · 访问：${result.checkedAt ?? new Date().toISOString()}`)
     for (const [i, item] of (result.items ?? []).entries()) console.log(`\n${i + 1}. ${compact(item, 1200)}`)
     return 0
   }

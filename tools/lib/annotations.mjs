@@ -88,6 +88,12 @@ async function geneAnnotations(symbol, species) {
 
 async function variantAnnotations(rsid, build) {
   const out = []
+  const isHgvs = /[a-z]\.\d+/.test(String(rsid))
+  if (isHgvs) {
+    const c = await databaseSearch('clinvar', rsid, { limit: 3 })
+    if (c.ok && c.items?.length) out.push({ db: 'clinvar', fields: fieldMap(c.items.slice(0, 3), ['variationId', 'title', 'gene', 'classification', 'review', 'conditions']) })
+    return out
+  }
   const d = await databaseGet('dbsnp', rsid)
   if (d.ok && d.items?.length) out.push({ db: 'dbsnp', fields: fieldMap(d.items.slice(0, 1), ['rsid', 'createDate', 'placements']) })
   const c = await databaseSearch('clinvar', rsid, { limit: 3 })
@@ -133,7 +139,7 @@ export async function groundPaper(paper, text = '', {
   }
   const limit = Math.max(1, Math.min(30, Number(maxEntities) || 8))
   const genesIn = candidates.genes.slice(0, limit)
-  const variantsIn = [...candidates.rsids, ...candidates.genomic].slice(0, limit)
+  const variantsIn = [...candidates.rsids, ...candidates.genomic, ...candidates.hgvs].slice(0, limit)
   const accessionsIn = candidates.accessions.slice(0, limit)
   const entities = []
   const warnings = []
@@ -159,6 +165,10 @@ export async function groundPaper(paper, text = '', {
     return ann.length ? { type: 'variant', query: v, status: 'verified', annotations: ann, warnings: build ? [] : ['未指定 build；坐标/频率未做完整核对。'] } : null
   })
   entities.push(...variantRows.filter(Boolean))
+  const unresolvedHgvs = candidates.hgvs.filter((h) => !entities.some((e) => e.type === 'variant' && e.query === h))
+  for (const h of unresolvedHgvs) {
+    entities.push({ type: 'variant', query: h, status: 'unresolved', annotations: [], warnings: ['ClinVar 未解析该 HGVS；不要把它当作已核对变异。'] })
+  }
 
   const accRows = await mapLimit(accessionsIn, 2, async (a) => {
     const ann = await accessionAnnotations(a)
