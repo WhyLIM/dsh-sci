@@ -97,6 +97,7 @@ export const DEFAULTS = {
     downloadFigures: true,
     maxFigures: 8,
     enrichDatabases: true,
+    usePubtator: true,
     maxEntities: 8,
   },
   execution: {
@@ -272,6 +273,7 @@ export function sanitizeConfig(input) {
       downloadFigures: bool(rd.downloadFigures, d.reading.downloadFigures),
       maxFigures: Math.round(num(rd.maxFigures, d.reading.maxFigures, 0, 30)),
       enrichDatabases: bool(rd.enrichDatabases, d.reading.enrichDatabases),
+      usePubtator: bool(rd.usePubtator, d.reading.usePubtator),
       maxEntities: Math.round(num(rd.maxEntities, d.reading.maxEntities, 1, 30)),
     },
     execution: {

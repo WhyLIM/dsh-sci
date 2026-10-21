@@ -146,7 +146,7 @@ export async function run({ values, positionals }) {
   const qc = qcText(fullText)
   const shouldEnrich = values['no-enrich'] ? false : (Boolean(values.enrich) || cfg.reading.enrichDatabases)
   const grounding = shouldEnrich
-    ? await groundPaper(paper, fullText, { species: values.species ?? '', build: values.build ?? '', genes: values.genes ?? '', diseases: values.diseases ?? '', drugs: values.drugs ?? '', maxEntities: cfg.reading.maxEntities, refresh: Boolean(values.refresh) })
+    ? await groundPaper(paper, fullText, { species: values.species ?? '', build: values.build ?? '', genes: values.genes ?? '', diseases: values.diseases ?? '', drugs: values.drugs ?? '', maxEntities: cfg.reading.maxEntities, refresh: Boolean(values.refresh), usePubtator: cfg.reading.usePubtator !== false })
     : null
   if (grounding) paper.grounding = grounding
   savePaperRecord(paper)

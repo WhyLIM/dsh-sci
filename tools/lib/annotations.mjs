@@ -12,6 +12,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { PATHS, readConfig, readJson, atomicWrite } from './config.mjs'
 import { databaseGet, databaseSearch } from './databases.mjs'
+import { pubtatorAnnotations, pubtatorHints } from './pubtator.mjs'
 
 const STOP = new Set(['DNA', 'RNA', 'MRNA', 'CDNA', 'CRISPR', 'GWAS', 'AI', 'LLM', 'LLMS', 'FDA', 'EMA', 'WHO', 'NIH', 'NGS', 'PCR', 'CI', 'SD', 'SEM', 'AUC', 'ROC', 'MCC', 'F1', 'GPU', 'CPU', 'TP53TG5', 'COVID', 'SARS', 'HIV', 'Mtb', 'TCGA', 'GEO', 'SRA', 'ENA', 'PRIDE', 'HCA', 'GTEX', 'HPA', 'PDB', 'EMDB'])
 const GENE_TOKEN = /\b[A-Z][A-Z0-9]{1,9}\b/g
@@ -33,9 +34,9 @@ function dedupeCI(xs) { const seen = new Set(); return xs.filter((x) => { const 
 function cacheFile(key) { return path.join(PATHS.annotations, `${key}.json`) }
 function hashKey(s) { return crypto.createHash('sha1').update(String(s)).digest('hex').slice(0, 16) }
 
-export function extractCandidates({ text = '', title = '', keywords = [], genes = [], mesh = [], diseases = [], drugs = [] } = {}) {
+export function extractCandidates({ text = '', title = '', keywords = [], genes = [], mesh = [], diseases = [], drugs = [], variants = [], extraGenes = [], extraDiseases = [], extraDrugs = [] } = {}) {
   const body = `${title}\n${text}`
-  const explicit = String(genes ?? '').split(/[,;，]/).map((x) => x.trim()).filter(Boolean)
+  const explicit = uniq(String(genes ?? '').split(/[,;，]/).map((x) => x.trim()).filter(Boolean))
   const tokens = []
   const geneText = `${title}\n${(keywords ?? []).join(' ')}`
   for (const m of geneText.match(GENE_TOKEN) ?? []) {
@@ -43,23 +44,25 @@ export function extractCandidates({ text = '', title = '', keywords = [], genes 
     if (!/[0-9]/.test(m)) continue // 无数字的基因符号太容易误报；用 --genes 显式指定
     tokens.push(m)
   }
-  const candidates = uniq([...explicit, ...tokens]).slice(0, 12)
+  const candidates = uniq([...explicit, ...extraGenes, ...tokens]).slice(0, 12)
   const diseaseRe = /\b(disease|syndrome|disorder|cancer|carcinoma|neoplas|tumou?r|infection|deficiency|failure|injury|fibrosis|diabetes|hypertension|stroke|asthma|arthritis|dementia|sepsis|malaria|tuberculosis|infarction|ischemia|ischaemia|haemorrhage|hemorrhage|edema|oedema|lesion)\b/i
   const diseasePhrase = /\b([A-Za-z][A-Za-z0-9-]*(?:\s+[A-Za-z0-9-]+){0,3}\s+(?:disease|syndrome|disorder|cancer|carcinoma|neoplas[ia]?|tumou?r|infection|deficiency|failure|injury|fibrosis|diabetes|hypertension|stroke|asthma|arthritis|dementia|sepsis|malaria|tuberculosis|infarction|ischemia|ischaemia|haemorrhage|hemorrhage|edema|oedema|lesion))\b/gi
   const stripDiseasePrefix = /^(?:(?:we|the|a|an|this|that|these|those|and|or|of|in|with|for|to|from|after|before|during|among|patients?|subjects?|studied|study|studies|showed|found|including|associated|risk)\s+)+/i
   const textDiseases = [...`${title}\n${text}`.matchAll(diseasePhrase)]
     .map((m) => m[1].trim().replace(stripDiseasePrefix, '').trim())
     .filter((x) => x && x.length <= 80 && !/^(the|a|an|this|that|these|those|patients?|subjects?|disease|syndrome)\b/i.test(x))
-  const diseaseHints = dedupeCI([...explicitList(diseases), ...(mesh ?? []).filter((m) => diseaseRe.test(String(m))), ...textDiseases]).slice(0, 4)
-  const drugHints = uniq(explicitList(drugs)).slice(0, 4)
+  const diseaseHints = dedupeCI([...explicitList(diseases), ...extraDiseases, ...(mesh ?? []).filter((m) => diseaseRe.test(String(m))), ...textDiseases]).slice(0, 4)
+  const drugHints = dedupeCI([...explicitList(drugs), ...extraDrugs]).slice(0, 4)
   const accessions = []
   for (const [db, re] of ACC) for (const m of body.match(re) ?? []) accessions.push({ db, id: m.toUpperCase() })
-  const rsids = uniq((body.match(RS) ?? []).map((x) => x.toLowerCase()))
-  const hgvs = uniq(body.match(HGVS) ?? [])
+  const extraVariants = (variants ?? []).map((x) => String(x).trim()).filter(Boolean)
+  const rsids = uniq([...(body.match(RS) ?? []), ...extraVariants.filter((x) => /^rs\d+$/i.test(x))].map((x) => x.toLowerCase()))
+  const hgvs = uniq([...(body.match(HGVS) ?? []), ...extraVariants.filter((x) => /[a-z]\.\d+/.test(x))])
   const genomic = []
   for (const m of body.match(GENOMIC) ?? []) {
     genomic.push(m.replace(/^chr/i, '').toUpperCase())
   }
+  for (const m of extraVariants.filter((x) => /^(?:chr)?[0-9XYM]{1,2}[-:]/i.test(x))) genomic.push(String(m).replace(/^chr/i, '').toUpperCase())
   return {
     genes: candidates,
     diseases: diseaseHints,
@@ -148,13 +151,19 @@ async function mapLimit(items, limit, fn) {
 }
 
 export async function groundPaper(paper, text = '', {
-  species = '', build = '', genes = '', diseases = '', drugs = '', maxEntities = 8, refresh = false,
+  species = '', build = '', genes = '', diseases = '', drugs = '', maxEntities = 8, refresh = false, usePubtator = true,
 } = {}) {
   const cfg = readConfig()
   species = species || cfg.researcher?.species || ''
   build = build || ''
-  const candidates = extractCandidates({ text, title: paper?.title ?? '', keywords: paper?.keywords ?? [], genes, mesh: paper?.mesh ?? [], diseases, drugs })
-  const cacheKey = hashKey(JSON.stringify({ key: paper?.key, species, build, candidates }))
+  let pt = null
+  let ptError = ''
+  if (usePubtator && paper?.pmid) {
+    try { pt = await pubtatorAnnotations(paper.pmid, { refresh }) } catch (e) { ptError = String(e?.message ?? e) }
+  }
+  const hints = pubtatorHints(pt)
+  const candidates = extractCandidates({ text, title: paper?.title ?? '', keywords: paper?.keywords ?? [], genes, mesh: paper?.mesh ?? [], diseases, drugs, variants: hints.variants, extraGenes: hints.genes, extraDiseases: hints.diseases, extraDrugs: hints.drugs })
+  const cacheKey = hashKey(JSON.stringify({ key: paper?.key, pmid: paper?.pmid ?? '', species, build, usePubtator, candidates }))
   const file = cacheFile(cacheKey)
   if (!refresh) {
     const hit = readJson(file, null)
@@ -167,6 +176,7 @@ export async function groundPaper(paper, text = '', {
   const entities = []
   const warnings = []
   if (!species) warnings.push('未指定物种；基因注释可能不完整。用 --species human/mouse/9606 更可靠。')
+  if (ptError) warnings.push(`PubTator 注释失败：${ptError.slice(0, 160)}`)
   if (!build && variantsIn.length) warnings.push('未指定基因组版本；变异坐标/频率只做了标识符级核对。')
 
   const geneRows = await mapLimit(genesIn, 2, async (symbol) => {
@@ -231,6 +241,7 @@ export async function groundPaper(paper, text = '', {
     entities,
     unresolved: entities.filter((e) => e.status !== 'verified').map((e) => e.query),
     warnings,
+    pubtator: pt ? { pmid: pt.pmid, genes: pt.genes.length, diseases: pt.diseases.length, chemicals: pt.chemicals.length, variants: pt.variants.length } : null,
     disclaimer: '只使用这里返回的数据库 ID/字段；未列出的基因、变异、坐标、结构不要写成数据库事实。',
   }
   atomicWrite(file, JSON.stringify(result, null, 2) + '\n')

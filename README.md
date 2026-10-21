@@ -18,7 +18,7 @@
 | 结构化笔记 | 按研究类型选择模板，记录 PICO、偏倚风险、效应量、置信区间、局限和对课题的启示 |
 | 数据库查询 | 内置 50 多个生物信息数据库目录，其中 42 个可直接查询；需要账号或当前 API 不可用的数据库只保留说明，不绕过授权 |
 | 数据集文件 | `dataset files` 列出 GEO supplementary、SRA/ENA FASTQ 和 PRIDE 文件位置；不自动下载 |
-| 数据核对 | 把论文中的基因、变异、疾病、药物和数据集编号对应到数据库标准记录；疾病候选来自 MeSH 和全文短语，仍需数据库核对 |
+| 数据核对 | 把论文中的基因、变异、疾病、药物和数据集编号对应到数据库标准记录；疾病候选来自 MeSH、全文短语和 PubTator，仍需数据库核对 |
 | 实体规范化 | 支持基因、变异、蛋白、疾病、药物、通路、表型；可用 `entity batch --file ids.txt` 批量映射 |
 | 工作流检查 | 识别 Nextflow、Snakemake、WDL；检查工具和环境；默认 dry-run，实际执行必须显式确认 |
 | 计算类工作 | 检查 VCF、BED、GFF、FASTA、FASTQ、10x 矩阵等文件；读取 BAM/CRAM/HDF5/BigWig 文件头；检查数据与代码可用性；生成 Methods 草稿和 Benchmark 表 |
@@ -203,6 +203,7 @@ OpenAlex API key 和联系邮箱用于提高请求额度。密钥只写入 `~/.d
 - `dataset download` 只处理公开 HTTP(S)/FTP 地址，不绕过受控数据授权；默认单文件上限 2GB。
 - `db search --all` 目前只支持 ChEBI 和 DailyMed；其他数据库的分页语义尚未确认。
 - 全文疾病候选是字符串匹配，必须通过 Monarch 精确核对后才会写入笔记。
+- PubTator 只对带 PMID 的论文启用；注释会缓存 7 天，网络失败不会阻断本地阅读。
 - `dataset files` 只列出文件位置和校验信息，不自动下载大文件。
 - 复杂表格、合并单元格和跨页表格可能解析不完整。
 - 非开放获取论文只能读取摘要。
@@ -226,7 +227,7 @@ node --check scheduler.js
 find tools -name '*.mjs' -print0 | xargs -0 -n1 node --check
 ```
 
-`npm test` 运行 33 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
+`npm test` 运行 34 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
 
 主要文件：
 

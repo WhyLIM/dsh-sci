@@ -211,7 +211,7 @@ async function main() {
     strict: false,
   })
   if (values.version) {
-    console.log('dsh-sci 0.9.5')
+    console.log('dsh-sci 0.9.6')
     return 0
   }
   const cmd = positionals[0]

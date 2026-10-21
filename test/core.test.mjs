@@ -27,6 +27,7 @@ import { extractBenchmark } from '../tools/lib/benchmark.mjs'
 import { graphHtml } from '../tools/lib/graph.mjs'
 import { validateMethods, journalFormat } from '../tools/lib/methods.mjs'
 import { detectWorkflow, planWorkflow } from '../tools/lib/workflow.mjs'
+import { normalizePubtator, pubtatorHints } from '../tools/lib/pubtator.mjs'
 import { downloadUrl } from '../tools/lib/datasets.mjs'
 import { inspectOmics } from '../tools/lib/omics.mjs'
 import { extractCandidates } from '../tools/lib/annotations.mjs'
@@ -330,6 +331,19 @@ test('download resumes a range and writes sha256', async () => {
     assert.equal(fs.readFileSync(dest).toString(), 'abcdefghij')
     assert.equal(r.sha256, '72399361da6a7754fec986dca5b7cbaf1c810a28ded4abaf56b2106d06cb78b0')
   } finally { server.close() }
+})
+
+test('PubTator normalization deduplicates and separates entity types', () => {
+  const p = normalizePubtator({ PubTator3: [{ passages: [{ annotations: [
+    { text: 'NPY', infons: { type: 'Gene', identifier: '24604', database: 'ncbi_gene', name: 'Npy' } },
+    { text: 'NPY', infons: { type: 'Gene', identifier: '24604', database: 'ncbi_gene', name: 'Npy' } },
+    { text: 'corticosterone', infons: { type: 'Chemical', identifier: 'MESH:D003345', database: 'ncbi_mesh', name: 'Corticosterone' } },
+    { text: 'PTSD', infons: { type: 'Disease', identifier: 'MESH:D013313', database: 'ncbi_mesh', name: 'Stress Disorders Post-Traumatic' } },
+  ] }] }] })
+  assert.equal(p.genes.length, 1)
+  assert.equal(p.chemicals[0].name, 'Corticosterone')
+  assert.equal(p.diseases[0].identifier, 'MESH:D013313')
+  assert.deepEqual(pubtatorHints(p).genes, ['Npy'])
 })
 
 test('workflow detection builds a safe argv plan', () => {

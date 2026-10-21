@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { databaseSearch, databaseGet } from '../tools/lib/databases.mjs'
+import { pubtatorAnnotations } from '../tools/lib/pubtator.mjs'
 
 const live = process.env.DSH_SCI_LIVE_TESTS === '1'
 
@@ -17,6 +18,11 @@ test('live public DB contract smoke', { skip: live ? false : 'set DSH_SCI_LIVE_T
   const pgx = await databaseSearch('clinpgx', 'CYP2D6', { limit: 2 })
   assert.equal(pgx.ok, true)
   assert.ok(pgx.items.some((x) => x.symbol === 'CYP2D6'))
+
+  const pt = await pubtatorAnnotations('25057792')
+  assert.equal(pt.ok, true)
+  assert.ok(pt.genes.length > 0)
+  assert.ok(pt.diseases.length > 0)
 
   const label = await databaseSearch('dailymed', 'metformin', { limit: 2 })
   assert.equal(label.ok, true)

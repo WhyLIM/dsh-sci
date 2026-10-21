@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.6
+
+- Add PubTator 3 gene/disease/chemical/variant candidate annotations.
+- Add PubTator toggle to reading settings; annotations remain database-verified.
+
 ## 0.9.5
 
 - Add full-text disease candidate extraction with database verification.
