@@ -454,7 +454,10 @@ export function rankPapers(papers, profile, opts) {
 }
 
 export function looksLikeRepository(paper) {
-  return /zenodo|figshare|osf preprints|ssrn|research square|preprints\.org|concept library|data catalog|dataverse|dryad/i.test(String(paper?.venue ?? ''))
+  const type = String(paper?.type ?? '').toLowerCase()
+  if (['book', 'book-chapter', 'dataset', 'software', 'peer-review', 'paratext'].includes(type)) return true
+  if (['dataset', 'software'].includes(String(paper?.rawType ?? '').toLowerCase())) return true
+  return /zenodo|figshare|osf preprints|ssrn|research square|preprints\.org|concept library|data catalog|dataverse|dryad|sciencedb|science data bank|ebooks?|e-books?|book chapter|handbook|encyclopedia|routledge|palgrave|edward elgar|world scientific/i.test(String(paper?.venue ?? ''))
 }
 
 export function looksExcluded(paper, profile) {

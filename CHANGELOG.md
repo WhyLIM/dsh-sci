@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.9
+
+- Ignore invalid publication types instead of generating zero-result PubMed/Europe PMC queries.
+- Stop using the generic field placeholder as a search query.
+- Exclude ebook/chapter and no-abstract records from default candidates.
+- Add MDPI mdpi-res PDF fallback for CC-BY articles blocked by the landing page.
+
 ## 0.9.8
 
 - Fix bioRxiv `--limit` handling and pagination termination.

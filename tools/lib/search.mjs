@@ -30,6 +30,40 @@ import { queryForLog } from './privacy.mjs'
 
 const PAPER_SOURCES = ['openalex', 'arxiv', 'biorxiv', 'europepmc', 'pubmed', 'crossref']
 
+const PUB_TYPE_ALIASES = new Map(Object.entries({
+  'randomized controlled trial': 'Randomized Controlled Trial',
+  'randomised controlled trial': 'Randomized Controlled Trial',
+  rct: 'Randomized Controlled Trial',
+  review: 'Review',
+  'systematic review': 'Systematic Review',
+  'meta-analysis': 'Meta-Analysis',
+  'meta analysis': 'Meta-Analysis',
+  guideline: 'Guideline',
+  guidelines: 'Guideline',
+  'clinical trial': 'Clinical Trial',
+  'observational study': 'Observational Study',
+  'case report': 'Case Reports',
+  'case reports': 'Case Reports',
+  editorial: 'Editorial',
+  comment: 'Comment',
+  letter: 'Letter',
+  preprint: 'Preprint',
+}).map(([k, v]) => [k, v]))
+
+export function normalizeStudyTypes(values = []) {
+  const types = []
+  const ignored = []
+  for (const raw of values ?? []) {
+    const key = String(raw ?? '').trim().toLowerCase()
+    if (!key) continue
+    const mapped = PUB_TYPE_ALIASES.get(key)
+    if (mapped) types.push(mapped)
+    else ignored.push(String(raw).trim())
+  }
+  return { types: [...new Set(types)], ignored }
+}
+
+
 export function enabledSources(cfg = readConfig()) {
   return Object.entries(cfg.sources)
     .filter(([k, v]) => PAPER_SOURCES.includes(k) && typeof v === 'boolean' && v)
@@ -51,7 +85,8 @@ export function queriesFor(profile, override) {
   const kws = (profile?.keywords ?? []).map((x) => String(x).trim()).filter(Boolean)
   if (kws.length) return [...new Set(kws)].slice(0, 3)
   const field = String(profile?.field ?? '').trim()
-  return field ? [field] : [DEFAULTS.researcher.field]
+  if (!field || /^(生物医学|biomedicine|biomedical|medicine|research|科研)$/i.test(field)) return []
+  return [field]
 }
 
 function filterDecision(paper, cfg) {
@@ -61,6 +96,7 @@ function filterDecision(paper, cfg) {
   if (!cfg.search.includeEditorials && ['editorial', 'retraction'].includes(paper.evidenceType)) return 'editorial'
   if (!cfg.search.includeGuidelines && paper.evidenceType === 'guideline') return 'guideline'
   if (!cfg.search.includePreprints && (paper.isPreprint || paper.evidenceType === 'preprint')) return 'preprint'
+  if (!cfg.search.includeNoAbstract && !String(paper.abstract ?? '').trim()) return 'no-abstract'
   if (!cfg.search.includeRepositories && looksLikeRepository(paper)) return 'repository'
   if (looksExcluded(paper, profile)) return 'excluded-term'
   return ''
@@ -221,6 +257,8 @@ export async function collectCandidates({
   const cfg = readConfig()
   const profile = cfg.researcher
   const qs = [...new Set([...queriesFor(profile, query), ...topicQueries(cfg)])]
+  const pt = normalizeStudyTypes(profile.studyTypes)
+  const warnings = pt.ignored.length ? [`未知出版类型已忽略：${pt.ignored.join(', ')}`] : []
   const reports = []
   const all = []
   let rawCount = 0
@@ -235,7 +273,7 @@ export async function collectCandidates({
       includeGuidelines: cfg.search.includeGuidelines,
       titleAbstractOnly: cfg.search.titleAbstractOnly,
       synonymExpansion: cfg.search.synonymExpansion,
-      pubTypes: profile.studyTypes ?? [],
+      pubTypes: pt.types,
       bypassCache,
     })
     all.push(...r.papers)
@@ -244,6 +282,7 @@ export async function collectCandidates({
   }
 
   const deduped = dedupePapers(all)
+  if (!qs.length) warnings.push('没有配置关键词、PICO 或有效的研究方向；本轮没有发起检索。请先在设置页填写检索条件。')
   const seen = includeSeen ? new Set() : seenKeys()
   const counts = {
     identified: rawCount,
@@ -284,6 +323,7 @@ export async function collectCandidates({
     reports,
     days: days ?? cfg.search.lookbackDays,
     topics: topicTitles(cfg),
+    warnings,
     prisma: counts,
     strategy: {
       mode: profile.evidenceMode,

@@ -426,6 +426,27 @@ export async function downloadFigures(paper, figures, { max = 8 } = {}) {
   return out
 }
 
+export function mdpiPdfCandidates(paper) {
+  const doi = String(paper?.doi ?? '').replace(/^https?:\/\/doi\.org\//i, '').trim()
+  const m = doi.match(/^10\.3390\/([a-z][a-z0-9-]*?)(\d+)$/i)
+  if (!m) return []
+  const slug = m[1].toLowerCase()
+  const digits = m[2]
+  const out = []
+  for (const vlen of [1, 2]) {
+    if (digits.length < vlen + 3) continue
+    const vol = digits.slice(0, vlen).padStart(2, '0')
+    const rest = digits.slice(vlen + 2)
+    if (!rest) continue
+    for (const pad of [4, 5]) {
+      const article = rest.padStart(pad, '0')
+      const name = `${slug}-${vol}-${article}`
+      out.push(`https://mdpi-res.com/d_attachment/${slug}/${name}/article_deploy/${name}.pdf`)
+    }
+  }
+  return [...new Set(out)]
+}
+
 export async function buildFullText(paper, {
   refresh = false,
   downloadPdf = true,
@@ -499,6 +520,17 @@ export async function buildFullText(paper, {
     }
 
     // 3) OA PDF
+    if (!text && downloadPdf && !paper.pdfUrl && /^10\.3390\//i.test(String(paper.doi ?? ''))) {
+      for (const url of mdpiPdfCandidates(paper)) {
+        try {
+          const buf = await httpBuffer(url, { maxBytes: 80 * 1024 * 1024 })
+          const pdfPath = path.join(PATHS.pdfs, `${key}.pdf`)
+          fs.writeFileSync(pdfPath, buf)
+          text = cleanPdfText(extractPdfText(pdfPath))
+          if (text) { source = 'MDPI OA PDF'; paper.pdfUrl = url; break }
+        } catch {}
+      }
+    }
     if (!text && downloadPdf && paper.pdfUrl) {
       try {
         const buf = await httpBuffer(paper.pdfUrl, { maxBytes: 80 * 1024 * 1024 })

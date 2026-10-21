@@ -204,6 +204,8 @@ OpenAlex API key 和联系邮箱用于提高请求额度。密钥只写入 `~/.d
 - `dataset download` 只处理公开 HTTP(S)/FTP 地址，不绕过受控数据授权；默认单文件上限 2GB。
 - `db search --all` 目前只支持 ChEBI 和 DailyMed；其他数据库的分页语义尚未确认。
 - 全文疾病候选是字符串匹配，必须通过 Monarch 精确核对后才会写入笔记。
+- 没有关键词、PICO 或有效研究方向时不会再用「生物医学」作为检索词，而是给出配置提示。
+- 无摘要记录、电子书/章节和数据集记录默认不进入候选；可在设置中打开对应开关。
 - PubTator 只对带 PMID 的论文启用；注释会缓存 7 天，网络失败不会阻断本地阅读。
 - `dataset files` 只列出文件位置和校验信息，不自动下载大文件。
 - 复杂表格、合并单元格和跨页表格可能解析不完整。
@@ -228,7 +230,7 @@ node --check scheduler.js
 find tools -name '*.mjs' -print0 | xargs -0 -n1 node --check
 ```
 
-`npm test` 运行 35 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
+`npm test` 运行 37 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
 
 主要文件：
 

@@ -17,6 +17,11 @@ export async function run({ values }) {
   })
   const date = todayLocal()
   const extraLines = []
+  if (result.warnings?.length) {
+    extraLines.push('## 配置提示', '')
+    for (const w of result.warnings) extraLines.push(`> ${w}`)
+    extraLines.push('')
+  }
 
   const queue = listPapers().filter((p) => ['reading', 'queued'].includes(p.status)).slice(0, 4)
   if (queue.length) {
@@ -66,6 +71,7 @@ export async function run({ values }) {
       strategyFile,
       queries: result.queries,
       prisma: result.prisma,
+      warnings: result.warnings,
       trials,
       scanned: result.scanned,
       afterFilter: result.afterFilter,

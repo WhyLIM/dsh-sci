@@ -8,11 +8,11 @@ import http from 'node:http'
 
 import {
   invertedToText, normalizeTitle, titleKey, dedupePapers, scorePaper,
-  normalizePaper, paperType, cleanAbstract,
+  normalizePaper, paperType, cleanAbstract, looksLikeRepository,
 } from '../tools/lib/normalize.mjs'
 import { sanitizeConfig, DEFAULTS, paperKey, outputPaths } from '../tools/lib/config.mjs'
 import { parseFrontmatter, formatFrontmatter } from '../tools/lib/library.mjs'
-import { headingInfo, splitSections, chunkSections, tablesFromPmcXml, figuresFromPmcXml } from '../tools/lib/fulltext.mjs'
+import { headingInfo, splitSections, chunkSections, tablesFromPmcXml, figuresFromPmcXml, mdpiPdfCandidates } from '../tools/lib/fulltext.mjs'
 import { classifyInput } from '../tools/lib/paper.mjs'
 import { buildPubmedQuery } from '../tools/lib/sources/pubmed.mjs'
 import { noteScaffold } from '../tools/lib/library.mjs'
@@ -29,6 +29,7 @@ import { validateMethods, journalFormat } from '../tools/lib/methods.mjs'
 import { detectWorkflow, planWorkflow } from '../tools/lib/workflow.mjs'
 import { normalizePubtator, pubtatorHints } from '../tools/lib/pubtator.mjs'
 import { parseBiorxivItem } from '../tools/lib/sources/biorxiv.mjs'
+import { queriesFor, normalizeStudyTypes } from '../tools/lib/search.mjs'
 import { downloadUrl } from '../tools/lib/datasets.mjs'
 import { inspectOmics } from '../tools/lib/omics.mjs'
 import { extractCandidates } from '../tools/lib/annotations.mjs'
@@ -333,6 +334,19 @@ test('download resumes a range and writes sha256', async () => {
     assert.equal(fs.readFileSync(dest).toString(), 'abcdefghij')
     assert.equal(r.sha256, '72399361da6a7754fec986dca5b7cbaf1c810a28ded4abaf56b2106d06cb78b0')
   } finally { server.close() }
+})
+
+test('MDPI DOI resolves to an mdpi-res PDF candidate', () => {
+  const urls = mdpiPdfCandidates({ doi: '10.3390/superintelligence1020008' })
+  assert.ok(urls.some((u) => u.includes('superintelligence-01-00008')))
+})
+
+test('empty/generic fields do not become search queries', () => {
+  assert.deepEqual(queriesFor({ field: '生物医学', keywords: [], pico: {} }, null), [])
+  assert.deepEqual(queriesFor({ field: 'oncology', keywords: [], pico: {} }, null), ['oncology'])
+  const pt = normalizeStudyTypes(['Agent', 'LLM', 'rct', 'Meta-Analysis'])
+  assert.deepEqual(pt.types, ['Randomized Controlled Trial', 'Meta-Analysis'])
+  assert.deepEqual(pt.ignored, ['Agent', 'LLM'])
 })
 
 test('bioRxiv items normalize as preprints', () => {
