@@ -544,11 +544,13 @@ export async function buildFullText(paper, {
     }
 
     if (text) {
+      paper.hasFullText = true
       atomicWrite(cacheFile, text)
       try { atomicWrite(metaFile, JSON.stringify({ source, tables, figures, supplementary, warnings: [...warnings] }, null, 2) + '\n') } catch {}
     }
   }
 
+  if (text) paper.hasFullText = true
   if (!text) {
     warnings.push('没有拿到开放全文；下面只使用题录与摘要。不要凭标题推断结果。')
     text = ''

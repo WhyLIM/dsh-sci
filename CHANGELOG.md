@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.10
+
+- Mark papers as full-text available after cached or newly extracted MDPI/PMC/HTML/PDF text.
+
 ## 0.9.9
 
 - Ignore invalid publication types instead of generating zero-result PubMed/Europe PMC queries.
