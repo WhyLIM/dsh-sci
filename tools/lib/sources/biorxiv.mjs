@@ -57,7 +57,7 @@ export async function searchBiorxiv({ query, days = 14, limit = 10, bypassCache 
   const from = new Date(Date.now() - Math.max(1, days) * 86_400_000)
   const start = from.toISOString().slice(0, 10)
   const end = to.toISOString().slice(0, 10)
-  const per = Math.min(100, Math.max(10, Number(limit) || 10))
+  const per = Math.min(100, Math.max(1, Number(limit) || 10))
   const maxPages = 8
   const found = []
   let cursor = 0
@@ -80,7 +80,7 @@ export async function searchBiorxiv({ query, days = 14, limit = 10, bypassCache 
         found.push(p)
       }
       cursor += collection.length
-      if (collection.length < 100 || cursor >= total) break
+      if (cursor >= total) break
       if (found.length >= per * 8) break
     }
     found.sort((a, b) => (b.extra?.titleHits ?? 0) - (a.extra?.titleHits ?? 0) || String(b.date).localeCompare(String(a.date)))

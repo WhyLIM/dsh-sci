@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.8
+
+- Fix bioRxiv `--limit` handling and pagination termination.
+
 ## 0.9.7
 
 - Add bioRxiv as a default-enabled preprint source with local title/abstract filtering.
