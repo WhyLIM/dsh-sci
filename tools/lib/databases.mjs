@@ -583,7 +583,7 @@ async function ena(q, o, mode) {
     ? 'accession,description,tax_id,scientific_name,base_count'
     : result === 'study'
       ? 'study_accession,study_title,study_description,first_public'
-      : 'run_accession,experiment_accession,sample_accession,study_accession,instrument_platform,library_strategy,read_count,base_count'
+      : 'run_accession,experiment_accession,sample_accession,study_accession,instrument_platform,library_strategy,read_count,base_count,fastq_ftp,fastq_bytes,fastq_md5,submitted_ftp'
   const query = /[=<>]/.test(id) ? id : (result === 'sequence' ? `description="*${id}*"` : `study_title="*${id}*"`)
   const d = await getJson(`https://www.ebi.ac.uk/ena/portal/api/search?result=${enc(result)}&query=${enc(query)}&fields=${enc(fields)}&limit=${clamp(o.limit, 1, 50, 10)}&format=json`, { cacheTtlMs: 864e5 })
   return ok('ena', 'search', { query: id, result, items: arr(d) })
@@ -737,7 +737,7 @@ const HANDLERS = {
 export function detectAccessionDb(id) {
   const s = String(id ?? '').trim()
   if (/^GSE\d+$/i.test(s) || /^GDS\d+$/i.test(s) || /^GPL\d+$/i.test(s)) return { db: 'geo', id: s }
-  if (/^PRJ[NAEDB]\d+$/i.test(s) || /^SR[RXSPZ]\d+$/i.test(s)) return { db: 'sra', id: s }
+  if (/^PRJ[A-Z]{2}\d+$/i.test(s) || /^SR[RXSPZ]\d+$/i.test(s)) return { db: 'sra', id: s }
   if (/^ERR\d+$/i.test(s) || /^DRR\d+$/i.test(s) || /^E-MTAB-\d+$/i.test(s)) return { db: 'ena', id: s }
   if (/^PXD\d+$/i.test(s)) return { db: 'pride', id: s }
   if (/^ST\d+$/i.test(s)) return { db: 'metabolomics-workbench', id: s }

@@ -1,8 +1,21 @@
-import { searchDatasets, getDataset } from '../lib/datasets.mjs'
+import { searchDatasets, getDataset, datasetFiles } from '../lib/datasets.mjs'
 import { detectAccessionDb } from '../lib/databases.mjs'
 
 export async function run({ values, positionals }) {
   const sub = positionals[0] ?? 'search'
+  if (sub === 'files' || sub === 'file-list') {
+    const acc = values.id ?? positionals[1]
+    if (!acc) throw new Error('用法：dataset files <GSE...|PRJNA...|PXD...>')
+    const r = await datasetFiles(acc, { limit: values.limit ?? '50' })
+    if (values.json) process.stdout.write(JSON.stringify(r, null, 2) + '\n')
+    else if (!r.ok) { console.error(`✗ ${r.error}`); return 1 }
+    else {
+      console.log(`# ${r.source} · ${r.accession} · ${r.total} 个文件/记录`)
+      for (const [i, x] of r.items.entries()) console.log(`\n${i + 1}. ${JSON.stringify(x).slice(0, 1200)}`)
+      for (const w of r.warnings ?? []) console.log(`⚠️ ${w}`)
+    }
+    return r.ok ? 0 : 1
+  }
   if (sub === 'get' || sub === 'fetch') {
     const acc = values.id ?? positionals[1]
     if (!acc) throw new Error('用法：dataset get <GSE...|PRJNA...|PXD...|ST...>')

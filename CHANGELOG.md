@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.3
+
+- Add dataset file listing for GEO, SRA/ENA and PRIDE.
+- Fix BioProject accession detection (PRJNA/PRJEB/PRJDB).
+
 ## 0.9.2
 
 - Add disease, drug, pathway and phenotype entity resolution and batch mapping.

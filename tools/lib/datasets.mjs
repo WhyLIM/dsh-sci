@@ -4,6 +4,7 @@
  * 日期过滤和 completeness 由各库/调用者显式确认。
  */
 import { databaseSearch, databaseGet, detectAccessionDb } from './databases.mjs'
+import { httpGet, httpJson } from './http.mjs'
 
 const DEFAULT_SOURCES = ['geo', 'sra', 'ena', 'pride', 'hca', 'metabolomics-workbench']
 
@@ -41,4 +42,39 @@ export async function getDataset(accession, opts = {}) {
   const a = detectAccessionDb(accession)
   if (!a) throw new Error('无法识别数据集 accession（GSE/PRJNA/SRR/PXD/E-MTAB/ST...）')
   return databaseGet(a.db, a.id, opts)
+}
+
+
+export async function datasetFiles(accession, { limit = 50 } = {}) {
+  const a = detectAccessionDb(accession)
+  if (!a) throw new Error('无法识别数据集 accession（GSE/PRJNA/SRR/PXD/E-MTAB/ST...）')
+  const per = Math.max(1, Math.min(100, Number(limit) || 50))
+  if (a.db === 'pride') {
+    const d = await httpJson(`https://www.ebi.ac.uk/pride/ws/archive/v3/projects/${encodeURIComponent(a.id)}/files?page=0&pageSize=${per}`, { cacheTtlMs: 7 * 864e5 })
+    const items = (Array.isArray(d) ? d : []).map((x) => ({
+      accession: x.accession,
+      name: x.fileName ?? x.name ?? '',
+      category: x.fileCategory?.value ?? x.fileCategory?.name ?? '',
+      locations: (x.publicFileLocations ?? []).map((l) => l.value).filter(Boolean),
+    }))
+    return { ok: true, accession: a.id, source: 'pride', total: items.length, items }
+  }
+  if (a.db === 'sra' || a.db === 'ena') {
+    const field = /^PRJ/i.test(a.id) ? 'study_accession' : /^SR[RXSPZ]/i.test(a.id) ? 'run_accession' : 'study_accession'
+    const q = `${field}="${a.id}"`
+    const r = await databaseSearch('ena', q, { action: 'read_run', limit: per })
+    const items = (r.items ?? []).map((x) => ({
+      run: x.run_accession, study: x.study_accession, experiment: x.experiment_accession,
+      fastq: String(x.fastq_ftp ?? '').split(';').filter(Boolean),
+      submitted: String(x.submitted_ftp ?? '').split(';').filter(Boolean),
+      bytes: x.fastq_bytes ?? '', md5: x.fastq_md5 ?? '',
+    }))
+    return { ok: r.ok, accession: a.id, source: 'ena', total: items.length, items, error: r.error }
+  }
+  if (a.db === 'geo') {
+    const txt = (await httpGet(`https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=${encodeURIComponent(a.id)}&targ=self&form=text&view=brief`, { cacheTtlMs: 7 * 864e5 })).body
+    const items = [...txt.matchAll(/^!Series_supplementary_file\s*=\s*(.+)$/gm)].map((m) => ({ url: m[1].trim() }))
+    return { ok: true, accession: a.id, source: 'geo', total: items.length, items, warnings: ['GEO 只列出 supplementary_file 字段；文件可能很大，未自动下载。'] }
+  }
+  throw new Error(`dataset files 暂不支持 ${a.db}；可用 GSE/PRJNA/SRR/PXD/E-MTAB`)
 }

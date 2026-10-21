@@ -12,7 +12,7 @@ const UNIPROT = /^[A-Z0-9]{6,10}(?:-\d+)?$/
 const GENE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,30}$/
 const ACC = [
   ['geo', /^GSE\d+$/i], ['geo', /^GDS\d+$/i], ['geo', /^GPL\d+$/i],
-  ['sra', /^PRJ[NAEDB]\d+$/i], ['sra', /^SR[RXSPZ]\d+$/i], ['ena', /^ERR\d+$/i], ['ena', /^DRR\d+$/i],
+  ['sra', /^PRJ[A-Z]{2}\d+$/i], ['sra', /^SR[RXSPZ]\d+$/i], ['ena', /^ERR\d+$/i], ['ena', /^DRR\d+$/i],
   ['ena', /^E-MTAB-\d+$/i], ['pride', /^PXD\d+$/i], ['hca', /^[0-9a-f-]{36}$/i],
   ['clinicaltrials', /^NCT\d+$/i], ['pdb', /^[0-9][A-Za-z0-9]{3}$/],
   ['emdb', /^EMD-\d+$/i], ['dbsnp', RS], ['hpo', /^HP:\d+$/i], ['quickgo', /^GO:\d+$/i],

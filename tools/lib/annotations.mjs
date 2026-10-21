@@ -20,7 +20,7 @@ const HGVS = /\b(?:[A-Z]{1,4}_?\d+(?:\.\d+)?:)?[cgmn]\.\d+[ACGT]>[ACGT]\b/gi
 const GENOMIC = /\b(?:chr)?([0-9XYM]{1,2})[:\-](\d{2,})[\s:_-]*([ACGT]+)[>\/]([ACGT]+)\b/gi
 const ACC = [
   ['geo', /\bGSE\d{3,}\b/gi], ['geo', /\bGDS\d{3,}\b/gi], ['geo', /\bGPL\d{3,}\b/gi], ['geo', /\bGSM\d{3,}\b/gi],
-  ['sra', /\bPRJ[NAEDB]\d{4,}\b/gi], ['sra', /\bSR[RXSPZ]\d{5,}\b/gi], ['sra', /\bSAM[NED][A-Z]?\d{4,}\b/gi],
+  ['sra', /\bPRJ[A-Z]{2}\d{4,}\b/gi], ['sra', /\bSR[RXSPZ]\d{5,}\b/gi], ['sra', /\bSAM[NED][A-Z]?\d{4,}\b/gi],
   ['ena', /\bERR\d{5,}\b/gi], ['ena', /\bDRR\d{5,}\b/gi], ['ena', /\bE-MTAB-\d{3,}\b/gi],
   ['pride', /\bPXD\d{5,}\b/gi], ['dbgap', /\bphs\d{6,}\b/gi], ['ega', /\bEGA[SD]\d{5,}\b/gi],
   ['clinicaltrials', /\bNCT\d{8}\b/gi], ['pdb', /\b(?!19|20)[0-9][A-Za-z0-9]{2}[A-Za-z]\b/g], ['emdb', /\bEMD-\d{4,}\b/gi],

@@ -17,7 +17,7 @@ import { buildPubmedQuery } from '../tools/lib/sources/pubmed.mjs'
 import { noteScaffold } from '../tools/lib/library.mjs'
 import { toBibtex } from '../tools/lib/exporters.mjs'
 import { redactPHI } from '../tools/lib/privacy.mjs'
-import { DATABASES, getDatabase, databaseHelp, normalizeClinpgx, normalizeChebiDoc, normalizeChebiCompound, normalizeDailymed } from '../tools/lib/databases.mjs'
+import { DATABASES, getDatabase, databaseHelp, detectAccessionDb, normalizeClinpgx, normalizeChebiDoc, normalizeChebiCompound, normalizeDailymed } from '../tools/lib/databases.mjs'
 import { PUBMED_FIELDS, normalizePubmedQuery } from '../tools/lib/sources/pubmed-fields.mjs'
 import { extractRepro } from '../tools/lib/repro.mjs'
 import { qcText } from '../tools/lib/qc.mjs'
@@ -248,6 +248,8 @@ test('bioinformatics P0-P2 primitives', async () => {
   assert.deepEqual(detectAccession('CHEBI:15365'), { db: 'chebi', id: 'CHEBI:15365' })
   assert.deepEqual(detectAccession('MONDO:0005148'), { db: 'monarch', id: 'MONDO:0005148' })
   assert.deepEqual(detectAccession('HP:0000118'), { db: 'hpo', id: 'HP:0000118' })
+  assert.deepEqual(detectAccession('PRJNA257197'), { db: 'sra', id: 'PRJNA257197' })
+  assert.deepEqual(detectAccessionDb('PRJNA257197'), { db: 'sra', id: 'PRJNA257197' })
   assert.equal(detectAccession('not-an-id'), null)
 
   const b = extractBenchmark([{ label: 'T1', markdown: '| Dataset | Method | Accuracy |\n|---|---|---|\n| D1 | M1 | 0.9 |' }])
@@ -309,6 +311,7 @@ test('database grounding candidates are explicit/ID based', () => {
   assert.equal(c.genes.includes('TP53'), true)
   assert.equal(c.genes.includes('EGFR'), true)
   assert.equal(c.accessions.some((x) => x.db === 'geo' && x.id === 'GSE12345'), true)
+  assert.equal(extractCandidates({ text: 'PRJNA257197' }).accessions.some((x) => x.db === 'sra' && x.id === 'PRJNA257197'), true)
   assert.equal(c.rsids.includes('rs334'), true)
   const h = extractCandidates({ text: 'NM_000546.6:c.818G>A and chr17:7675087 A>G' })
   assert.equal(h.hgvs[0], 'NM_000546.6:c.818G>A')

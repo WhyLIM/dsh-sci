@@ -17,6 +17,7 @@
 | 全文阅读 | 只读取合法的开放获取（OA）或 PMC 全文，支持按章节、表格、图片和关键词阅读 |
 | 结构化笔记 | 按研究类型选择模板，记录 PICO、偏倚风险、效应量、置信区间、局限和对课题的启示 |
 | 数据库查询 | 内置 50 多个生物信息数据库目录，其中 42 个可直接查询；需要账号或当前 API 不可用的数据库只保留说明，不绕过授权 |
+| 数据集文件 | `dataset files` 列出 GEO supplementary、SRA/ENA FASTQ 和 PRIDE 文件位置；不自动下载 |
 | 数据核对 | 把论文中的基因、变异、蛋白、数据集编号对应到数据库标准记录，并标出未核对的实体 |
 | 实体规范化 | 支持基因、变异、蛋白、疾病、药物、通路、表型；可用 `entity batch --file ids.txt` 批量映射 |
 | 计算类工作 | 检查 VCF、BED、GFF、FASTA、FASTQ、10x 矩阵等文件；读取 BAM/CRAM/HDF5/BigWig 文件头；检查数据与代码可用性；生成 Methods 草稿和 Benchmark 表 |
@@ -79,6 +80,7 @@ $SCI entity query gene TP53 --species human
 $SCI entity resolve disease "type 2 diabetes"
 $SCI entity batch --file ids.txt
 $SCI dataset get GSE328618
+$SCI dataset files PXD000001 --limit 5
 $SCI omics inspect sample.vcf --build GRCh38
 
 $SCI graph build
@@ -188,6 +190,7 @@ OpenAlex API key 和联系邮箱用于提高请求额度。密钥只写入 `~/.d
 - 不支持 OCR。扫描版 PDF 无文字层时会明确失败。
 - 图片下载依赖 PMC 和出版社页面。图片缺失时保留图注和链接，不标记为已阅读。
 - BAM/CRAM/HDF5/BigWig 目前只检查文件头和签名，不解析全部记录。
+- `dataset files` 只列出文件位置和校验信息，不自动下载大文件。
 - 复杂表格、合并单元格和跨页表格可能解析不完整。
 - 非开放获取论文只能读取摘要。
 - 引文追踪依赖 Europe PMC 的引用数据，新论文的引用数可能不完整。

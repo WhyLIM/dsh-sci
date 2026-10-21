@@ -6,10 +6,10 @@
  */
 const ACCESSIONS = [
   ['geo', /\bGSE\d{3,}\b/gi], ['geo', /\bGDS\d{3,}\b/gi], ['geo', /\bGPL\d{3,}\b/gi],
-  ['sra', /\bPRJ[NAEDB]\d{4,}\b/gi], ['sra', /\bSR[RXSPZ]\d{5,}\b/gi],
+  ['sra', /\bPRJ[A-Z]{2}\d{4,}\b/gi], ['sra', /\bSR[RXSPZ]\d{5,}\b/gi],
   ['ena', /\bERR\d{5,}\b/gi], ['ena', /\bDRR\d{5,}\b/gi], ['ena', /\bE-MTAB-\d{3,}\b/gi],
   ['pride', /\bPXD\d{5,}\b/gi], ['dbgap', /\bphs\d{6,}\b/gi], ['ega', /\bEGA[SD]\d{5,}\b/gi],
-  ['zenodo', /\b10\.5281\/zenodo\.\d+\b/gi], ['bioproject', /\bPRJ[NAEDB]\d{4,}\b/gi],
+  ['zenodo', /\b10\.5281\/zenodo\.\d+\b/gi], ['bioproject', /\bPRJ[A-Z]{2}\d{4,}\b/gi],
 ]
 const CODE_HOSTS = /https?:\/\/(?:www\.)?(github\.com|gitlab\.com|bitbucket\.org|codeberg\.org)\/[\w.-]+\/[\w.-]+/gi
 const CONTROLLED = /\b(dbGaP|EGA|controlled[- ]access|data use agreement|DUA|IRB|ethics approval|informed consent)\b/gi

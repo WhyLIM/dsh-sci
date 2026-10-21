@@ -22,7 +22,7 @@ function addEdge(edges, from, to, type, evidence = '') {
 }
 function accessions(text) {
   const out = []
-  for (const re of [/\bGSE\d{3,}\b/gi, /\bPXD\d{5,}\b/gi, /\bPRJ[NAEDB]\d{4,}\b/gi, /\bE-MTAB-\d{3,}\b/gi, /\bphs\d{6,}\b/gi, /\bEGA[SD]\d{5,}\b/gi]) {
+  for (const re of [/\bGSE\d{3,}\b/gi, /\bPXD\d{5,}\b/gi, /\bPRJ[A-Z]{2}\d{4,}\b/gi, /\bE-MTAB-\d{3,}\b/gi, /\bphs\d{6,}\b/gi, /\bEGA[SD]\d{5,}\b/gi]) {
     for (const m of String(text ?? '').match(re) ?? []) out.push(m.toUpperCase())
   }
   return [...new Set(out)]

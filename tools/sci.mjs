@@ -138,8 +138,8 @@ function help() {
   pubmed-fields                列出 PubMed 全部字段标签
   watch                         按 ISSN watchlist 看最近论文
   db list|info|search|get       生物信息数据库 lookup（UniProt/Ensembl/PDB/GEO/...）
-  entity resolve|query|accession 生物实体规范化 / accession 识别
-  dataset search|get            GEO/SRA/ENA/PRIDE/HCA 数据集聚合
+  entity resolve|query|accession|batch 生物实体规范化 / accession / 批量
+  dataset search|get|files      GEO/SRA/ENA/PRIDE/HCA 数据集聚合 / 文件列表
   omics inspect                 VCF/BED/FASTA/FASTQ/GTF/10x 文件检查
   repro --id|--file            数据/代码可用性抽取
   qc --id|--file|--text        统计/ML 静态风险提示
@@ -195,7 +195,7 @@ async function main() {
     strict: false,
   })
   if (values.version) {
-    console.log('dsh-sci 0.9.2')
+    console.log('dsh-sci 0.9.3')
     return 0
   }
   const cmd = positionals[0]
