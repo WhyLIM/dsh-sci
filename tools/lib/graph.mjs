@@ -90,6 +90,22 @@ export function queryGraph(term, limit = 30) {
   return { nodes, edges, builtAt: g.builtAt }
 }
 
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+}
+export function graphHtml(g) {
+  const nodes = (g.nodes ?? []).map((n) => `<li><b>${esc(n.type)}</b> <code>${esc(n.id)}</code> — ${esc(n.label)}</li>`).join('\n')
+  const edges = (g.edges ?? []).map((e) => `<li><code>${esc(e.from)}</code> → <code>${esc(e.to)}</code> <span>${esc(e.type)}</span></li>`).join('\n')
+  return `<!doctype html>
+<html lang="zh"><meta charset="utf-8"><title>dsh-sci evidence graph</title>
+<style>body{font:14px system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#20252b}code{background:#f3f5f7;padding:.1em .3em;border-radius:4px}li{margin:.35rem 0}span{color:#667}section{margin-top:2rem}</style>
+<h1>dsh-sci evidence graph</h1>
+<p>${g.nodes?.length ?? 0} nodes · ${g.edges?.length ?? 0} edges · built ${esc(g.builtAt ?? '—')}</p>
+<section><h2>Nodes</h2><ul>${nodes}</ul></section>
+<section><h2>Edges</h2><ul>${edges}</ul></section>
+</html>
+`
+}
 export function graphMarkdown(r) {
   const lines = [`# 证据图 · ${r.nodes.length} nodes`, '', `构建：${r.builtAt ?? '尚未构建'}`, '' ]
   for (const n of r.nodes) lines.push(`- **${n.type}** \`${n.id}\` — ${n.label}`)

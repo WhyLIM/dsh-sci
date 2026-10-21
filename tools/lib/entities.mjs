@@ -16,8 +16,8 @@ const ACC = [
   ['ena', /^E-MTAB-\d+$/i], ['pride', /^PXD\d+$/i], ['hca', /^[0-9a-f-]{36}$/i],
   ['clinicaltrials', /^NCT\d+$/i], ['pdb', /^[0-9][A-Za-z0-9]{3}$/],
   ['emdb', /^EMD-\d+$/i], ['dbsnp', RS], ['hpo', /^HP:\d+$/i], ['quickgo', /^GO:\d+$/i],
-  ['monarch', /^MONDO:\d+$/i], ['chembl', /^CHEMBL\d+$/i], ['pubchem', /^CID:\d+$/i],
-  ['ensembl', ENSG],
+  ['monarch', /^(MONDO|DOID):\d+$/i], ['chembl', /^CHEMBL\d+$/i], ['pubchem', /^CID:\d+$/i],
+  ['ensembl', ENSG], ['chebi', /^CHEBI:\d+$/i],
 ]
 
 export function detectAccession(input) {
@@ -37,9 +37,9 @@ export async function resolveEntity({ type = 'gene', id, species = '' } = {}) {
   const value = String(id ?? '').trim()
   if (!value) throw new Error('entity resolve 需要 id')
   const warnings = []
-  if (!species) warnings.push('未指定物种；基因符号可能跨物种歧义。建议 --species human/mouse/9606。')
   const t = String(type).toLowerCase()
   if ((t === 'gene' || t === 'auto') && GENE.test(value)) {
+    if (!species) warnings.push('未指定物种；基因符号可能跨物种歧义。建议 --species human/mouse/9606。')
     const g = await databaseSearch('ncbi-gene', value, { species, limit: 5 })
     if (g.ok && g.items?.length) {
       const x = g.items[0]
@@ -66,6 +66,48 @@ export async function resolveEntity({ type = 'gene', id, species = '' } = {}) {
     const c = await databaseSearch('clinvar', value, { limit: 5 })
     if (c.ok && c.items?.length) return { ok: true, type: 'variant', id: value, canonical: value, aliases: [], ids: { clinvar: c.items[0].variationId }, organism: '', warnings, source: 'clinvar' }
   }
+  if (t === 'disease' || (t === 'auto' && /^(MONDO|DOID|EFO|ORPHA):/i.test(value))) {
+    const byId = /^(MONDO|DOID|EFO|ORPHA|HP):/i.test(value)
+    if (byId) {
+      const m = await databaseGet('monarch', value)
+      if (m.ok && m.items?.length) {
+        const x = m.items[0]
+        return { ok: true, type: 'disease', id: value, canonical: x.name || value, aliases: [], ids: { monarch: x.id }, organism: '', warnings, source: 'monarch' }
+      }
+      const o = await databaseGet('opentargets', value)
+      if (o.ok && o.items?.length) {
+        const x = o.items[0]
+        return { ok: true, type: 'disease', id: value, canonical: x.name || value, aliases: [], ids: { opentargets: x.id }, organism: '', warnings, source: 'opentargets' }
+      }
+    } else {
+      const m = await databaseSearch('monarch', value, { limit: 10 })
+      const ql = value.toLowerCase()
+      const x = (m.ok ? (m.items ?? []) : [])
+        .filter((i) => /disease/i.test(String(i.category ?? '')) || /^MONDO:/i.test(String(i.id ?? '')))
+        .filter((i) => !/,\s*(pig|cat|dog|mouse|rat|horse|sheep|cattle|goat|chicken|zebrafish|macaque|hamster|non-human)/i.test(String(i.name ?? '')))
+        .sort((a, b) => {
+          const score = (i) => String(i.name ?? '').toLowerCase() === ql ? 0 : String(i.name ?? '').toLowerCase().startsWith(ql) ? 1 : 2
+          return score(a) - score(b)
+        })[0] ?? null
+      if (x) return { ok: true, type: 'disease', id: value, canonical: x.name || value, aliases: [], ids: { monarch: x.id }, organism: '', warnings, source: 'monarch' }
+    }
+  }
+  if (t === 'drug' || t === 'chemical' || (t === 'auto' && /^CHEBI:/i.test(value))) {
+    const c = await databaseSearch('chebi', value, { limit: 5 })
+    const x = c.ok ? (c.items ?? [])[0] : null
+    if (x) return { ok: true, type: 'chemical', id: value, canonical: x.name || value, aliases: (x.synonyms ?? []).slice(0, 6), ids: { chebi: x.id }, organism: '', warnings, source: 'chebi' }
+  }
+  if (t === 'pathway' || (t === 'auto' && /^R-HSA-/i.test(value))) {
+    const r = await databaseSearch('reactome', value, { limit: 5 })
+    const x = r.ok ? (r.items ?? [])[0] : null
+    if (x) return { ok: true, type: 'pathway', id: value, canonical: x.name || value, aliases: [], ids: { reactome: x.id }, organism: '', warnings, source: 'reactome' }
+  }
+  if (t === 'phenotype' || (t === 'auto' && /^HP:\d+$/i.test(value))) {
+    const h = /^HP:\d+$/i.test(value) ? await databaseGet('hpo', value) : await databaseSearch('hpo', value, { limit: 5 })
+    const x = h.ok ? (h.items ?? [])[0] : null
+    if (x) return { ok: true, type: 'phenotype', id: value, canonical: x.name || value, aliases: [], ids: { hpo: x.id }, organism: '', warnings, source: 'hpo' }
+  }
+
   const acc = detectAccession(value)
   if (acc && t === 'auto') {
     return { ok: true, type: 'accession', id: value, canonical: value, aliases: [], ids: { [acc.db]: acc.id }, organism: '', warnings, source: acc.db, accession: acc }

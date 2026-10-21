@@ -22,6 +22,7 @@ const OPTIONS = {
   days: { type: 'string' },
   limit: { type: 'string' },
   page: { type: 'string' },
+  all: { type: 'boolean' },
   source: { type: 'string' },
   'oa-only': { type: 'boolean' },
   'no-oa': { type: 'boolean' },
@@ -142,7 +143,8 @@ function help() {
   omics inspect                 VCF/BED/FASTA/FASTQ/GTF/10x 文件检查
   repro --id|--file            数据/代码可用性抽取
   qc --id|--file|--text        统计/ML 静态风险提示
-  graph build|query|stats      本地证据图
+  graph build|query|stats|html 本地证据图
+  entity batch --file ids.txt  批量实体规范化
   benchmark --id               从缓存表格抽 benchmark
   methods draft --id           生成 Methods 草稿
   compliance --id|--file       受控数据合规检查
@@ -157,6 +159,7 @@ function help() {
   --days 14           时间窗（默认取配置）
   --limit 10          每个源取多少
   --page 2            数据库搜索翻页（ChEBI / DailyMed）
+  --all               数据库搜索取完所有页（仅 ChEBI / DailyMed）
   --source europepmc,pubmed,openalex
   --oa-only           发现阶段只要开放获取（默认按配置；阅读阶段始终 OA）
   --no-cache          绕过本地缓存
@@ -192,7 +195,7 @@ async function main() {
     strict: false,
   })
   if (values.version) {
-    console.log('dsh-sci 0.9.1')
+    console.log('dsh-sci 0.9.2')
     return 0
   }
   const cmd = positionals[0]

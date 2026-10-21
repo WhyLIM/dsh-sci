@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2
+
+- Add disease, drug, pathway and phenotype entity resolution and batch mapping.
+- Add `db search --all` pagination for ChEBI/DailyMed with count/page guards.
+- Add `graph html` local evidence graph export.
+
 ## 0.9.0
 
 - Add public database handlers for ClinPGx, ChEBI and DailyMed.

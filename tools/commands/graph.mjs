@@ -1,4 +1,6 @@
-import { buildGraph, loadGraph, queryGraph, graphMarkdown, GRAPH_FILE } from '../lib/graph.mjs'
+import fs from 'node:fs'
+import path from 'node:path'
+import { buildGraph, loadGraph, queryGraph, graphMarkdown, graphHtml, GRAPH_FILE } from '../lib/graph.mjs'
 
 export async function run({ values, positionals }) {
   const sub = positionals[0] ?? 'stats'
@@ -6,6 +8,15 @@ export async function run({ values, positionals }) {
     const g = buildGraph()
     if (values.json) process.stdout.write(JSON.stringify({ ok: true, file: GRAPH_FILE, nodes: g.nodes.length, edges: g.edges.length }, null, 2) + '\n')
     else console.log(`已构建：${GRAPH_FILE}\n节点 ${g.nodes.length} · 边 ${g.edges.length}`)
+    return 0
+  }
+  if (sub === 'html') {
+    const g = loadGraph()
+    const out = path.resolve(values.out ?? path.join(path.dirname(GRAPH_FILE), 'graph.html'))
+    fs.mkdirSync(path.dirname(out), { recursive: true })
+    fs.writeFileSync(out, graphHtml(g))
+    if (values.json) process.stdout.write(JSON.stringify({ ok: true, file: out, nodes: g.nodes.length, edges: g.edges.length }, null, 2) + '\n')
+    else console.log(`已生成：${out}\n节点 ${g.nodes.length} · 边 ${g.edges.length}`)
     return 0
   }
   if (sub === 'stats') {
@@ -24,5 +35,5 @@ export async function run({ values, positionals }) {
     else console.log(graphMarkdown(r))
     return 0
   }
-  throw new Error(`未知 graph 子命令：${sub}。可用：build/stats/query`)
+  throw new Error(`未知 graph 子命令：${sub}。可用：build/stats/query/html`)
 }

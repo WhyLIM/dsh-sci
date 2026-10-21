@@ -23,6 +23,7 @@ import { extractRepro } from '../tools/lib/repro.mjs'
 import { qcText } from '../tools/lib/qc.mjs'
 import { detectAccession } from '../tools/lib/entities.mjs'
 import { extractBenchmark } from '../tools/lib/benchmark.mjs'
+import { graphHtml } from '../tools/lib/graph.mjs'
 import { inspectOmics } from '../tools/lib/omics.mjs'
 import { extractCandidates } from '../tools/lib/annotations.mjs'
 
@@ -244,6 +245,9 @@ test('bioinformatics P0-P2 primitives', async () => {
 
   assert.deepEqual(detectAccession('GSE12345'), { db: 'geo', id: 'GSE12345' })
   assert.deepEqual(detectAccession('PXD000001'), { db: 'pride', id: 'PXD000001' })
+  assert.deepEqual(detectAccession('CHEBI:15365'), { db: 'chebi', id: 'CHEBI:15365' })
+  assert.deepEqual(detectAccession('MONDO:0005148'), { db: 'monarch', id: 'MONDO:0005148' })
+  assert.deepEqual(detectAccession('HP:0000118'), { db: 'hpo', id: 'HP:0000118' })
   assert.equal(detectAccession('not-an-id'), null)
 
   const b = extractBenchmark([{ label: 'T1', markdown: '| Dataset | Method | Accuracy |\n|---|---|---|\n| D1 | M1 | 0.9 |' }])
@@ -292,6 +296,12 @@ test('public database normalizers keep verified fields', () => {
   const d = normalizeDailymed({ setid: 'abc', title: 'METFORMIN', published_date: 'Oct 19, 2026', spl_version: 3 })
   assert.equal(d.setid, 'abc')
   assert.equal(d.version, 3)
+})
+
+test('graph HTML escapes labels and includes edges', () => {
+  const html = graphHtml({ nodes: [{ id: 'paper:x', type: 'paper', label: '<b>Paper</b>' }], edges: [{ from: 'paper:x', to: 'dataset:Y', type: 'uses_dataset' }], builtAt: '2026-01-01' })
+  assert.match(html, /&lt;b&gt;Paper&lt;\/b&gt;/)
+  assert.match(html, /uses_dataset/)
 })
 
 test('database grounding candidates are explicit/ID based', () => {

@@ -73,6 +73,38 @@ export async function run({ values, positionals }) {
   const identifier = values.id ?? positionals[2] ?? ''
   if (sub === 'search' || sub === 'query' || sub === 'lookup') {
     if (!query) throw new Error('db search 需要查询词')
+    if (values.all) {
+      if (!['chebi', 'dailymed'].includes(db.id)) throw new Error('--all 目前只支持 chebi / dailymed；其他库的翻页语义未确认')
+      const first = await databaseSearch(dbId, query, { ...opts, page: 1 })
+      if (!first.ok) { console.error(`✗ ${first.error}`); return 1 }
+      const seen = new Set()
+      const items = []
+      let pages = 1
+      let total = first.total ?? 0
+      const add = (x) => {
+        const k = JSON.stringify(x)
+        if (seen.has(k)) return false
+        seen.add(k); items.push(x); return true
+      }
+      for (const x of first.items ?? []) add(x)
+      const maxPages = Math.min(100, Math.max(1, Math.ceil((total || items.length) / opts.limit)))
+      for (let page = 2; page <= maxPages && items.length < 10_000; page++) {
+        const r = await databaseSearch(dbId, query, { ...opts, page })
+        if (!r.ok) break
+        pages += 1
+        let added = 0
+        for (const x of r.items ?? []) if (add(x)) added += 1
+        if (!added) break
+      }
+      const warning = items.length >= 10_000 ? '达到 10000 条上限，未继续分页' : (pages >= maxPages && items.length < total ? `只取了前 ${pages} 页（共 ${total} 条）；达到页数上限` : '')
+      const result = { ok: true, db: db.id, mode: 'search', query, total, pages, items, checkedAt: new Date().toISOString(), warning }
+      if (values.json) { process.stdout.write(JSON.stringify({ ...result, provenance: databaseProvenance(db, { ...opts, query, page: null }) }, null, 2) + '\n'); return 0 }
+      console.log(`# ${db.name} · all pages · ${query}`)
+      console.log(`来源：${databaseProvenance(db, { ...opts, query }).endpoint} · 页数：${pages} · 条数：${items.length}/${total}`)
+      for (const [i, item] of items.entries()) console.log(`\n${i + 1}. ${compact(item, 500)}`)
+      if (result.warning) console.log(`\n⚠️ ${result.warning}`)
+      return 0
+    }
     const result = await databaseSearch(dbId, query, opts)
     if (values.json) { process.stdout.write(JSON.stringify({ ...result, provenance: databaseProvenance(db, { ...opts, query }) }, null, 2) + '\n'); return result.ok ? 0 : 1 }
     if (!result.ok) { console.error(`✗ ${result.error}`); return 1 }

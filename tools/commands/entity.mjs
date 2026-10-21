@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { detectAccession, resolveEntity, buildEntityQueries } from '../lib/entities.mjs'
 import { databaseGet, getDatabase } from '../lib/databases.mjs'
 
@@ -29,6 +30,32 @@ export async function run({ values, positionals }) {
     }
     return entity.ok ? 0 : 1
   }
+  if (sub === 'batch') {
+    const type = values.type ?? 'auto'
+    let ids = positionals.slice(1)
+    if (values.file) {
+      ids = String(fs.readFileSync(values.file, 'utf8')).split(/\r?\n/).map((x) => x.trim()).filter(Boolean)
+    }
+    if (!ids.length) throw new Error('用法：entity batch <id...> 或 entity batch --file ids.txt [--type gene]')
+    const results = []
+    for (const id of ids) {
+      try {
+        const entity = await resolveEntity({ type, id, species: values.species ?? '' })
+        results.push({ input: id, ...entity, queries: buildEntityQueries(entity, { species: values.species ?? '' }) })
+      } catch (e) {
+        results.push({ input: id, ok: false, error: String(e?.message ?? e) })
+      }
+    }
+    if (values.json) print({ ok: results.some((x) => x.ok), type, results })
+    else {
+      for (const r of results) {
+        if (!r.ok) { console.log(`✗ ${r.input}：${r.error || '未解析'}`); continue }
+        console.log(`✓ ${r.input} → ${r.type} ${r.canonical} · ${JSON.stringify(r.ids)}`)
+      }
+    }
+    return results.some((x) => x.ok) ? 0 : 1
+  }
+
   if (sub === 'accession' || sub === 'lookup') {
     const id = values.id ?? positionals[1]
     if (!id) throw new Error('用法：accession lookup <GSE...|PRJNA...|PXD...|rs...>')
@@ -43,5 +70,5 @@ export async function run({ values, positionals }) {
     }
     return r.ok ? 0 : 1
   }
-  throw new Error(`未知 entity 子命令：${sub}。可用：detect/resolve/query/accession`)
+  throw new Error(`未知 entity 子命令：${sub}。可用：detect/resolve/query/accession/batch`)
 }
