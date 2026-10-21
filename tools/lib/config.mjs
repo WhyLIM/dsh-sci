@@ -41,6 +41,51 @@ export const PATHS = {
   topicsFile: path.join(SCI_HOME, 'topics.json'),
 }
 
+export const PUBLICATION_TYPES = [
+  'Randomized Controlled Trial', 'Clinical Trial', 'Systematic Review', 'Meta-Analysis',
+  'Review', 'Guideline', 'Observational Study', 'Case Reports', 'Preprint',
+  'Editorial', 'Comment', 'Letter', 'Retraction of Publication', 'Published Erratum',
+  'Comparative Study', 'Evaluation Study',
+]
+const PUB_TYPE_ALIASES = new Map(Object.entries({
+  rct: 'Randomized Controlled Trial',
+  'randomized controlled trial': 'Randomized Controlled Trial',
+  'randomised controlled trial': 'Randomized Controlled Trial',
+  'clinical trial': 'Clinical Trial',
+  'systematic review': 'Systematic Review',
+  review: 'Review',
+  'meta-analysis': 'Meta-Analysis',
+  'meta analysis': 'Meta-Analysis',
+  meta: 'Meta-Analysis',
+  guideline: 'Guideline',
+  guidelines: 'Guideline',
+  'observational study': 'Observational Study',
+  cohort: 'Observational Study',
+  'case report': 'Case Reports',
+  'case reports': 'Case Reports',
+  preprint: 'Preprint',
+  editorial: 'Editorial',
+  comment: 'Comment',
+  letter: 'Letter',
+  retraction: 'Retraction of Publication',
+  'retraction of publication': 'Retraction of Publication',
+  erratum: 'Published Erratum',
+  correction: 'Published Erratum',
+  'published erratum': 'Published Erratum',
+  'comparative study': 'Comparative Study',
+  'evaluation study': 'Evaluation Study',
+}))
+
+export function canonicalPublicationType(value) {
+  const key = String(value ?? '').trim()
+  if (!key) return ''
+  const exact = PUBLICATION_TYPES.find((x) => x.toLowerCase() === key.toLowerCase())
+  return exact ?? PUB_TYPE_ALIASES.get(key.toLowerCase()) ?? ''
+}
+export function canonicalPublicationTypes(values = []) {
+  return [...new Set((values ?? []).map(canonicalPublicationType).filter(Boolean))]
+}
+
 export const DEFAULTS = {
   researcher: {
     name: '博士生',
@@ -51,7 +96,8 @@ export const DEFAULTS = {
     issns: [],
     methods: [],
     studyTypes: [],
-    exclude: ['editorial', 'comment', 'letter', 'correction', 'erratum', 'retraction'],
+    excludeTypes: ['Editorial', 'Comment', 'Letter', 'Retraction of Publication', 'Published Erratum'],
+    exclude: [],
     evidenceMode: 'clinical',
     pico: { population: '', intervention: '', comparator: '', outcome: '' },
   },
@@ -223,8 +269,15 @@ export function sanitizeConfig(input) {
       venues: list(r.venues, d.researcher.venues, 30, 120),
       issns: list(r.issns, d.researcher.issns, 30, 20).map((x) => x.replace(/[^0-9Xx-]/g, '').toUpperCase()).filter(Boolean),
       methods: list(r.methods, d.researcher.methods, 24, 100),
-      studyTypes: list(r.studyTypes, d.researcher.studyTypes, 20, 60),
-      exclude: list(r.exclude, d.researcher.exclude, 24, 60),
+      studyTypes: canonicalPublicationTypes(list(r.studyTypes, [], 20, 60)),
+      excludeTypes: (() => {
+        const raw = list(r.exclude, [], 24, 60)
+        const hasExplicit = Array.isArray(r.excludeTypes)
+        const explicit = list(r.excludeTypes, [], 24, 60)
+        const migrated = raw.filter((x) => canonicalPublicationType(x))
+        return canonicalPublicationTypes(hasExplicit ? explicit : migrated.length ? migrated : d.researcher.excludeTypes)
+      })(),
+      exclude: list(r.exclude, [], 24, 60).filter((x) => !canonicalPublicationType(x)),
       evidenceMode: mode,
       pico: {
         population: str(pico.population, '', 300),

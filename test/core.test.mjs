@@ -10,7 +10,7 @@ import {
   invertedToText, normalizeTitle, titleKey, dedupePapers, scorePaper,
   normalizePaper, paperType, cleanAbstract, looksLikeRepository,
 } from '../tools/lib/normalize.mjs'
-import { sanitizeConfig, DEFAULTS, paperKey, outputPaths } from '../tools/lib/config.mjs'
+import { sanitizeConfig, DEFAULTS, paperKey, outputPaths, canonicalPublicationTypes } from '../tools/lib/config.mjs'
 import { parseFrontmatter, formatFrontmatter } from '../tools/lib/library.mjs'
 import { headingInfo, splitSections, chunkSections, tablesFromPmcXml, figuresFromPmcXml, mdpiPdfCandidates } from '../tools/lib/fulltext.mjs'
 import { classifyInput } from '../tools/lib/paper.mjs'
@@ -29,7 +29,7 @@ import { validateMethods, journalFormat } from '../tools/lib/methods.mjs'
 import { detectWorkflow, planWorkflow } from '../tools/lib/workflow.mjs'
 import { normalizePubtator, pubtatorHints } from '../tools/lib/pubtator.mjs'
 import { parseBiorxivItem } from '../tools/lib/sources/biorxiv.mjs'
-import { queriesFor, normalizeStudyTypes } from '../tools/lib/search.mjs'
+import { queriesFor, normalizeStudyTypes, publicationTypeExcluded, enabledSources } from '../tools/lib/search.mjs'
 import { downloadUrl } from '../tools/lib/datasets.mjs'
 import { inspectOmics } from '../tools/lib/omics.mjs'
 import { extractCandidates } from '../tools/lib/annotations.mjs'
@@ -336,6 +336,16 @@ test('download resumes a range and writes sha256', async () => {
   } finally { server.close() }
 })
 
+test('publication types are canonical and exclude by type', () => {
+  const c = sanitizeConfig({ researcher: { studyTypes: ['rct', 'Agent'], exclude: ['editorial', 'custom-term'] } })
+  assert.deepEqual(c.researcher.studyTypes, ['Randomized Controlled Trial'])
+  assert.deepEqual(c.researcher.excludeTypes, ['Editorial'])
+  assert.deepEqual(c.researcher.exclude, ['custom-term'])
+  assert.equal(canonicalPublicationTypes(['Meta-Analysis', 'LLM'])[0], 'Meta-Analysis')
+  assert.equal(publicationTypeExcluded({ evidenceType: 'review' }, ['Review']), true)
+  assert.equal(publicationTypeExcluded({ isPreprint: true }, ['Preprint']), true)
+})
+
 test('MDPI DOI resolves to an mdpi-res PDF candidate', () => {
   const urls = mdpiPdfCandidates({ doi: '10.3390/superintelligence1020008' })
   assert.ok(urls.some((u) => u.includes('superintelligence-01-00008')))
@@ -344,6 +354,7 @@ test('MDPI DOI resolves to an mdpi-res PDF candidate', () => {
 test('empty/generic fields do not become search queries', () => {
   assert.deepEqual(queriesFor({ field: '生物医学', keywords: [], pico: {} }, null), [])
   assert.deepEqual(queriesFor({ field: 'oncology', keywords: [], pico: {} }, null), ['oncology'])
+  assert.ok(enabledSources(sanitizeConfig({})).includes('biorxiv'))
   const pt = normalizeStudyTypes(['Agent', 'LLM', 'rct', 'Meta-Analysis'])
   assert.deepEqual(pt.types, ['Randomized Controlled Trial', 'Meta-Analysis'])
   assert.deepEqual(pt.ignored, ['Agent', 'LLM'])

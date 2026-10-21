@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.11
+
+- Replace free-text publication types with multi-select include/exclude type controls.
+- Canonicalize publication types and migrate legacy exclude values.
+- Filter excluded publication types before candidate ranking.
+
 ## 0.9.10
 
 - Mark papers as full-text available after cached or newly extracted MDPI/PMC/HTML/PDF text.

@@ -33,7 +33,8 @@ export async function run({ values }) {
   }
   let trials = null
   if (cfg.sources.clinicaltrials) {
-    const tq = result.queries[0] || cfg.researcher.field
+    const tq = result.queries[0] || (cfg.researcher.keywords ?? [])[0] || ''
+    if (!tq) { trials = null } else {
     const tr = await searchTrials({ query: tq, limit: 5 })
     trials = tr
     if (tr.trials?.length) {
@@ -45,6 +46,7 @@ export async function run({ values }) {
       extraLines.push('')
     } else if (tr.error) {
       extraLines.push(`## 相关临床试验\n\n> 检索失败：${tr.error}\n`)
+    }
     }
   }
   const ideas = listIdeas({ limit: 4 })

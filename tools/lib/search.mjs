@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   DEFAULTS, PATHS, outputPaths, readConfig, readState, writeState, writeJson,
-  paperKey, ensureDataDirs, appendLog, emailFor,
+  paperKey, ensureDataDirs, appendLog, emailFor, canonicalPublicationType, canonicalPublicationTypes,
 } from './config.mjs'
 import {
   dedupePapers, rankPapers, looksExcluded, looksLikeRepository, daysSince,
@@ -30,44 +30,26 @@ import { queryForLog } from './privacy.mjs'
 
 const PAPER_SOURCES = ['openalex', 'arxiv', 'biorxiv', 'europepmc', 'pubmed', 'crossref']
 
-const PUB_TYPE_ALIASES = new Map(Object.entries({
-  'randomized controlled trial': 'Randomized Controlled Trial',
-  'randomised controlled trial': 'Randomized Controlled Trial',
-  rct: 'Randomized Controlled Trial',
-  review: 'Review',
-  'systematic review': 'Systematic Review',
-  'meta-analysis': 'Meta-Analysis',
-  'meta analysis': 'Meta-Analysis',
-  guideline: 'Guideline',
-  guidelines: 'Guideline',
-  'clinical trial': 'Clinical Trial',
-  'observational study': 'Observational Study',
-  'case report': 'Case Reports',
-  'case reports': 'Case Reports',
-  editorial: 'Editorial',
-  comment: 'Comment',
-  letter: 'Letter',
-  preprint: 'Preprint',
-}).map(([k, v]) => [k, v]))
-
-export function normalizeStudyTypes(values = []) {
-  const types = []
-  const ignored = []
-  for (const raw of values ?? []) {
-    const key = String(raw ?? '').trim().toLowerCase()
-    if (!key) continue
-    const mapped = PUB_TYPE_ALIASES.get(key)
-    if (mapped) types.push(mapped)
-    else ignored.push(String(raw).trim())
-  }
-  return { types: [...new Set(types)], ignored }
-}
-
-
 export function enabledSources(cfg = readConfig()) {
   return Object.entries(cfg.sources)
     .filter(([k, v]) => PAPER_SOURCES.includes(k) && typeof v === 'boolean' && v)
     .map(([k]) => k)
+}
+
+export function normalizeStudyTypes(values = []) {
+  const types = canonicalPublicationTypes(values)
+  const ignored = (values ?? []).map((x) => String(x ?? '').trim()).filter((x) => x && !canonicalPublicationType(x))
+  return { types, ignored: [...new Set(ignored)] }
+}
+
+export function publicationTypeExcluded(paper, excludeTypes = []) {
+  const wanted = new Set(canonicalPublicationTypes(excludeTypes).map((x) => x.toLowerCase()))
+  if (!wanted.size) return false
+  if (wanted.has('preprint') && (paper?.isPreprint || paper?.evidenceType === 'preprint')) return true
+  const values = [paper?.evidenceType, paper?.type, ...(paper?.pubTypes ?? [])]
+    .map((x) => canonicalPublicationType(x) || String(x ?? '').toLowerCase())
+    .filter(Boolean)
+  return values.some((x) => wanted.has(String(x).toLowerCase()))
 }
 
 export function picoQuery(pico) {
@@ -96,6 +78,7 @@ function filterDecision(paper, cfg) {
   if (!cfg.search.includeEditorials && ['editorial', 'retraction'].includes(paper.evidenceType)) return 'editorial'
   if (!cfg.search.includeGuidelines && paper.evidenceType === 'guideline') return 'guideline'
   if (!cfg.search.includePreprints && (paper.isPreprint || paper.evidenceType === 'preprint')) return 'preprint'
+  if (publicationTypeExcluded(paper, profile.excludeTypes)) return 'excluded-type'
   if (!cfg.search.includeNoAbstract && !String(paper.abstract ?? '').trim()) return 'no-abstract'
   if (!cfg.search.includeRepositories && looksLikeRepository(paper)) return 'repository'
   if (looksExcluded(paper, profile)) return 'excluded-term'
@@ -271,6 +254,7 @@ export async function collectCandidates({
       includePreprints: cfg.search.includePreprints,
       includeEditorials: cfg.search.includeEditorials,
       includeGuidelines: cfg.search.includeGuidelines,
+      excludeTypes: profile.excludeTypes ?? [],
       titleAbstractOnly: cfg.search.titleAbstractOnly,
       synonymExpansion: cfg.search.synonymExpansion,
       pubTypes: pt.types,
@@ -333,6 +317,7 @@ export async function collectCandidates({
       includePreprints: cfg.search.includePreprints,
       includeEditorials: cfg.search.includeEditorials,
       includeGuidelines: cfg.search.includeGuidelines,
+      excludeTypes: profile.excludeTypes ?? [],
     },
   }
 }

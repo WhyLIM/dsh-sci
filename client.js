@@ -11,6 +11,24 @@ window.__ModuleLoader__.load({
     const h = React.createElement
     const { useCallback, useEffect, useRef, useState } = React
     const API = '/dsh-sci/api'
+    const PUBLICATION_TYPE_OPTIONS = [
+      ['Randomized Controlled Trial', '随机对照试验'],
+      ['Clinical Trial', '临床试验'],
+      ['Systematic Review', '系统综述'],
+      ['Meta-Analysis', 'Meta 分析'],
+      ['Review', '综述'],
+      ['Guideline', '指南/共识'],
+      ['Observational Study', '观察性研究'],
+      ['Case Reports', '病例报告'],
+      ['Preprint', '预印本'],
+      ['Editorial', '社论'],
+      ['Comment', '评论'],
+      ['Letter', '来信'],
+      ['Retraction of Publication', '撤稿'],
+      ['Published Erratum', '勘误'],
+      ['Comparative Study', '比较研究'],
+      ['Evaluation Study', '评价研究'],
+    ].map(([value, label]) => ({ value, label }))
 
     const ZH = {
       nav: '科研',
@@ -47,6 +65,9 @@ window.__ModuleLoader__.load({
       methodsHint: '例如 benchmark、ablation、external validation',
       exclude: '排除词',
       excludeHint: '标题/摘要命中的会降权，例如 editorial、correction',
+      pubTypeHint: '可多选；只使用 PubMed 支持的出版类型',
+      excludeType: '排除类型',
+      excludeTypeHint: '可多选；命中的记录不进入候选',
       execution: '执行位置',
       execHint: '指定作息到点后在哪个 DSH 工作区/会话里执行；默认是 dsh-sci + 数据目录。',
       execSession: '执行会话',
@@ -111,7 +132,6 @@ window.__ModuleLoader__.load({
       outcome: '主要结局（O）',
       outcomeHint: '例如 HbA1c change / MACE',
       studyTypes: '限定研究类型',
-      studyTypesHint: '只填真实出版类型，例如 Randomized Controlled Trial, Meta-Analysis, Guideline；Agent/LLM 不是出版类型，请填到关键词',
       issns: '常看期刊 ISSN',
       issnsHint: '逗号分隔，例如 0028-4793；比刊名缩写更可靠',
       discoveryOA: '发现阶段只要 OA',
@@ -221,6 +241,9 @@ window.__ModuleLoader__.load({
       methodsHint: 'e.g. benchmark, ablation, external validation',
       exclude: 'Exclude terms',
       excludeHint: 'Downrank hits such as editorial, correction',
+      pubTypeHint: 'Multi-select; PubMed publication types only',
+      excludeType: 'Exclude types',
+      excludeTypeHint: 'Multi-select; matching records are removed from candidates',
       execution: 'Execution target',
       execHint: 'Which DSH workspace/session the schedule runs in.',
       execSession: 'Execution session',
@@ -285,7 +308,6 @@ window.__ModuleLoader__.load({
       outcome: 'Outcome (O)',
       outcomeHint: 'e.g. HbA1c change / MACE',
       studyTypes: 'Study type filter',
-      studyTypesHint: 'Real publication types only, e.g. Randomized Controlled Trial, Meta-Analysis, Guideline; Agent/LLM belong in keywords',
       issns: 'Journal ISSN watchlist',
       issnsHint: 'Comma separated, e.g. 0028-4793',
       discoveryOA: 'Open access only (discovery)',
@@ -406,6 +428,8 @@ window.__ModuleLoader__.load({
       '.sci-source-opt{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}',
       '.sci-source-opt>div:first-child{flex:1;min-width:170px}',
       '.sci-details{margin-top:8px}',
+      '.sci-multi{display:flex;flex-wrap:wrap;gap:6px 14px;padding:4px 0}',
+      '.sci-check{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--dsw-alias-label-secondary)}',
       '.sci-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:24px}',
       '.sci-modal-box{width:min(460px,92vw);background:var(--dsw-alias-bg-overlay,var(--dsw-alias-bg-layer-1,#fff));color:var(--dsw-alias-label-primary,inherit);border:1px solid var(--dsw-alias-border-l2);border-radius:12px;padding:18px;box-shadow:0 16px 48px rgba(0,0,0,.28)}',
       '.sci-modal-title{font-weight:600;font-size:15px;margin-bottom:6px}',
@@ -495,6 +519,20 @@ window.__ModuleLoader__.load({
             onChange(v.split(/[,，]/).map((s) => s.trim()).filter(Boolean))
           },
         }))
+    }
+
+    function MultiSelectRow({ label, hint, value, onChange, options = [] }) {
+      const selected = new Set(Array.isArray(value) ? value : [])
+      const toggle = (v) => {
+        const next = new Set(selected)
+        if (next.has(v)) next.delete(v); else next.add(v)
+        onChange([...next])
+      }
+      return h(Row, { label, hint },
+        h('div', { className: 'sci-multi' },
+          options.map((o) => h('label', { key: o.value, className: 'sci-check' },
+            h('input', { type: 'checkbox', checked: selected.has(o.value), onChange: () => toggle(o.value) }),
+            h('span', null, `${o.label} · ${o.value}`)))))
     }
 
     function Switch({ checked, onChange, disabled }) {
@@ -1031,7 +1069,8 @@ window.__ModuleLoader__.load({
         h(ListRow, { label: t('keywords'), hint: t('keywordsHint'), value: rs.keywords, onChange: (v) => update((d) => { d.researcher.keywords = v }) }),
         h(ListRow, { label: t('venues'), hint: t('venuesHint'), value: rs.venues, onChange: (v) => update((d) => { d.researcher.venues = v }) }),
         h(ListRow, { label: t('issns'), hint: t('issnsHint'), value: rs.issns, onChange: (v) => update((d) => { d.researcher.issns = v }) }),
-        h(ListRow, { label: t('studyTypes'), hint: t('studyTypesHint'), value: rs.studyTypes, onChange: (v) => update((d) => { d.researcher.studyTypes = v }) }),
+        h(MultiSelectRow, { label: t('studyTypes'), hint: t('pubTypeHint'), value: rs.studyTypes, options: PUBLICATION_TYPE_OPTIONS, onChange: (v) => update((d) => { d.researcher.studyTypes = v }) }),
+        h(MultiSelectRow, { label: t('excludeType'), hint: t('excludeTypeHint'), value: rs.excludeTypes, options: PUBLICATION_TYPE_OPTIONS, onChange: (v) => update((d) => { d.researcher.excludeTypes = v }) }),
         h(ListRow, { label: t('methods'), hint: t('methodsHint'), value: rs.methods, onChange: (v) => update((d) => { d.researcher.methods = v }) }),
         h(ListRow, { label: t('exclude'), hint: t('excludeHint'), value: rs.exclude, onChange: (v) => update((d) => { d.researcher.exclude = v }) }),
 

@@ -13,7 +13,7 @@
 | 功能 | 说明 |
 |---|---|
 | 文献检索 | 默认使用 Europe PMC 和 PubMed；OpenAlex 补充跨学科题录；Crossref 补充 DOI 元数据；ClinicalTrials.gov 补充临床试验注册信息 |
-| 检索条件 | 支持 PICO（人群、干预、对照、结局）、研究类型、发表日期、期刊、作者、MeSH 主题词和字段限定 |
+| 检索条件 | 支持 PICO（人群、干预、对照、结局）、出版类型多选、排除类型、发表日期、期刊、作者、MeSH 主题词和字段限定 |
 | 全文阅读 | 只读取合法的开放获取（OA）或 PMC 全文，支持按章节、表格、图片和关键词阅读 |
 | 结构化笔记 | 按研究类型选择模板，记录 PICO、偏倚风险、效应量、置信区间、局限和对课题的启示 |
 | 数据库查询 | 内置 50 多个生物信息数据库目录，其中 42 个可直接查询；需要账号或当前 API 不可用的数据库只保留说明，不绕过授权 |
@@ -230,7 +230,7 @@ node --check scheduler.js
 find tools -name '*.mjs' -print0 | xargs -0 -n1 node --check
 ```
 
-`npm test` 运行 37 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
+`npm test` 运行 38 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
 
 主要文件：
 
