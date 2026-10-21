@@ -19,6 +19,38 @@ function parseMarkdown(md) {
   return { head, rows }
 }
 
+function metricValue(v) {
+  const s = String(v ?? '').trim()
+  if (!s || /^(?:-|—|n\/a|na|nr|not reported)$/i.test(s)) return null
+  const m = s.replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)
+  return m ? Number(m[0]) : null
+}
+
+export function validateBenchmark(result) {
+  const warnings = []
+  let numeric = 0, missing = 0, duplicates = 0
+  for (const t of result.tables ?? []) {
+    if (!t.caption) warnings.push(`${t.label || 'table'} 缺少 caption`)
+    if (!t.datasetColumn) warnings.push(`${t.label || 'table'} 未识别数据集列`)
+    if (!t.methodColumn) warnings.push(`${t.label || 'table'} 未识别方法列`)
+    const seen = new Set()
+    for (const row of t.rows ?? []) {
+      const key = JSON.stringify(row)
+      if (seen.has(key)) duplicates += 1
+      seen.add(key)
+      for (const c of t.metricColumns ?? []) {
+        const v = metricValue(row[c])
+        if (v == null) missing += 1
+        else numeric += 1
+      }
+    }
+  }
+  if (missing) warnings.push(`${missing} 个指标单元格不是可解析数字`)
+  if (duplicates) warnings.push(`${duplicates} 行重复`)
+  const confidence = result.tables?.length && warnings.length === 0 ? 'medium' : result.tables?.length ? 'low' : 'none'
+  return { numeric, missing, duplicates, warnings: [...new Set(warnings)], confidence, note: '未核对指标方向、单位、数据集划分或测试集泄漏。' }
+}
+
 export function extractBenchmark(tables, { paper = null } = {}) {
   const out = []
   for (const t of tables ?? []) {
@@ -46,7 +78,8 @@ export function extractBenchmark(tables, { paper = null } = {}) {
       ],
     })
   }
-  return { ok: true, paper: paper ? { key: paper.key ?? paperKey(paper), title: paper.title } : null, tables: out, note: '从已解析表格抽取，可能遗漏图/补充材料中的 benchmark。' }
+  const result = { ok: true, paper: paper ? { key: paper.key ?? paperKey(paper), title: paper.title } : null, tables: out, note: '从已解析表格抽取，可能遗漏图/补充材料中的 benchmark。' }
+  return { ...result, validation: validateBenchmark(result) }
 }
 
 export function cachedTables(paper) {

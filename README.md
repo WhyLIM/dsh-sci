@@ -20,6 +20,7 @@
 | 数据集文件 | `dataset files` 列出 GEO supplementary、SRA/ENA FASTQ 和 PRIDE 文件位置；不自动下载 |
 | 数据核对 | 把论文中的基因、变异、蛋白、数据集编号对应到数据库标准记录，并标出未核对的实体 |
 | 实体规范化 | 支持基因、变异、蛋白、疾病、药物、通路、表型；可用 `entity batch --file ids.txt` 批量映射 |
+| 工作流检查 | 识别 Nextflow、Snakemake、WDL；检查工具和环境；默认 dry-run，实际执行必须显式确认 |
 | 计算类工作 | 检查 VCF、BED、GFF、FASTA、FASTQ、10x 矩阵等文件；读取 BAM/CRAM/HDF5/BigWig 文件头；检查数据与代码可用性；生成 Methods 草稿和 Benchmark 表 |
 | 定时运行 | 自动模式创建 DSH 自动化任务；手动模式只在使用者点击按钮时执行 |
 | 导出与筛选 | 导出 RIS、BibTeX、CSL-JSON、CSV；记录纳入、排除和排除原因 |
@@ -81,10 +82,18 @@ $SCI entity resolve disease "type 2 diabetes"
 $SCI entity batch --file ids.txt
 $SCI dataset get GSE328618
 $SCI dataset files PXD000001 --limit 5
+$SCI dataset download PXD000001 --out ~/downloads --limit 2
 $SCI omics inspect sample.vcf --build GRCh38
 
 $SCI graph build
 $SCI graph html --out graph.html
+
+$SCI workflow inspect --path ~/projects/my-workflow
+$SCI workflow validate --path ~/projects/my-workflow
+
+$SCI benchmark --id pmid:42815042
+$SCI methods validate --id pmid:42815042
+$SCI methods draft --id pmid:42815042 --format jama
 ```
 
 大多数命令支持 `--json`，方便脚本处理。完整命令说明见 `node tools/sci.mjs --help`。
@@ -190,6 +199,8 @@ OpenAlex API key 和联系邮箱用于提高请求额度。密钥只写入 `~/.d
 - 不支持 OCR。扫描版 PDF 无文字层时会明确失败。
 - 图片下载依赖 PMC 和出版社页面。图片缺失时保留图注和链接，不标记为已阅读。
 - BAM/CRAM/HDF5/BigWig 目前只检查文件头和签名，不解析全部记录。
+- 工作流执行默认 dry-run；真实执行必须显式使用 `--execute --yes`，并自行确认数据授权和资源限制。
+- `dataset download` 只处理公开 HTTP(S)/FTP 地址，不绕过受控数据授权；默认单文件上限 2GB。
 - `dataset files` 只列出文件位置和校验信息，不自动下载大文件。
 - 复杂表格、合并单元格和跨页表格可能解析不完整。
 - 非开放获取论文只能读取摘要。
@@ -213,7 +224,7 @@ node --check scheduler.js
 find tools -name '*.mjs' -print0 | xargs -0 -n1 node --check
 ```
 
-`npm test` 运行 30 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
+`npm test` 运行 33 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
 
 主要文件：
 

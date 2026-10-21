@@ -3,15 +3,16 @@ import path from 'node:path'
 import { loadPaper, outputPaths, paperKey, readConfig } from '../lib/config.mjs'
 import { readNote } from '../lib/library.mjs'
 import { resolvePaper } from '../lib/paper.mjs'
+import { validateMethods, journalFormat } from '../lib/methods.mjs'
 
-function draft(paper, note) {
+function draft(paper, note, format = 'generic') {
   const r = paper.repro ?? {}
   const noteText = note?.text ?? ''
   const sections = []
   const m = noteText.match(/##\s*方法与数据\n([\s\S]*?)(?=\n##\s|$)/i)
   if (m) sections.push(m[1].trim())
   const pico = noteText.match(/##\s*PICO \/ 研究问题\n([\s\S]*?)(?=\n##\s|$)/i)
-  return `# Methods draft — ${paper.title ?? 'Untitled'}
+  const text = `# Methods draft — ${paper.title ?? 'Untitled'}
 
 > 这是从题录/笔记/可复现性线索生成的结构化草稿，不是可直接投稿的 Methods。每个空位都要人工核对。
 
@@ -52,6 +53,7 @@ ${sections.join('\n\n') || '- 关键步骤：\n- 参数：\n- 版本：\n- 随�
 - [ ] 统计模型与多重检验明确
 - [ ] 受控数据授权已确认
 `
+  return journalFormat(text, format)
 }
 
 export async function run({ values, positionals }) {
@@ -60,7 +62,17 @@ export async function run({ values, positionals }) {
   if (!id) throw new Error('用法：methods draft --id <paper> [--save]')
   const paper = loadPaper(id) ?? await resolvePaper(id)
   const note = readNote(paper.key ?? paperKey(paper))
-  const text = draft(paper, note)
+  const text = draft(paper, note, values.format ?? 'generic')
+  if (sub === 'validate') {
+    const v = validateMethods(text)
+    if (values.json) process.stdout.write(JSON.stringify({ ok: v.confidence !== 'none', validation: v }, null, 2) + '\n')
+    else {
+      console.log(`Methods 校验：confidence=${v.confidence} · 占位符=${v.placeholders}`)
+      for (const w of v.warnings) console.log(`⚠️ ${w}`)
+      console.log(`> ${v.note}`)
+    }
+    return v.confidence === 'none' ? 1 : 0
+  }
   if (sub === 'save' || values.save) {
     const out = outputPaths(readConfig()).methods
     fs.mkdirSync(out, { recursive: true })

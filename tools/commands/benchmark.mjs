@@ -14,5 +14,10 @@ export async function run({ values, positionals }) {
     for (const row of t.rows.slice(0, 30)) console.log(`- ${Object.entries(row).map(([k, v]) => `${k}=${v}`).join(' · ')}`)
     console.log('')
   }
+  if (r.validation) {
+    console.log(`校验：confidence=${r.validation.confidence} · 可解析指标=${r.validation.numeric} · 缺失=${r.validation.missing} · 重复=${r.validation.duplicates}`)
+    for (const w of r.validation.warnings) console.log(`⚠️ ${w}`)
+    console.log(`> ${r.validation.note}`)
+  }
   return 0
 }

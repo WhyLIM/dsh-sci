@@ -14,6 +14,7 @@ export async function run({ values, positionals }) {
   const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : `${paper.title ?? ''}\n${paper.abstract ?? ''}`
   const g = await groundPaper(paper, text, {
     species: values.species ?? '', build: values.build ?? '', genes: values.genes ?? '',
+    diseases: values.diseases ?? '', drugs: values.drugs ?? '',
     maxEntities: values.limit ?? 8, refresh: Boolean(values.refresh),
   })
   paper.grounding = g

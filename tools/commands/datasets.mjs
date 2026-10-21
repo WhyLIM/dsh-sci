@@ -1,4 +1,4 @@
-import { searchDatasets, getDataset, datasetFiles } from '../lib/datasets.mjs'
+import { searchDatasets, getDataset, datasetFiles, downloadDataset } from '../lib/datasets.mjs'
 import { detectAccessionDb } from '../lib/databases.mjs'
 
 export async function run({ values, positionals }) {
@@ -13,6 +13,27 @@ export async function run({ values, positionals }) {
       console.log(`# ${r.source} · ${r.accession} · ${r.total} 个文件/记录`)
       for (const [i, x] of r.items.entries()) console.log(`\n${i + 1}. ${JSON.stringify(x).slice(0, 1200)}`)
       for (const w of r.warnings ?? []) console.log(`⚠️ ${w}`)
+    }
+    return r.ok ? 0 : 1
+  }
+  if (sub === 'download') {
+    const acc = values.id ?? positionals[1]
+    if (!acc) throw new Error('用法：dataset download <accession> --out <dir> [--limit 10] [--yes]')
+    const r = await downloadDataset(acc, {
+      outDir: values.out ?? '',
+      limit: values.limit ?? '10',
+      maxBytes: values['max-bytes'] ?? String(2 * 1024 ** 3),
+      yes: Boolean(values.yes),
+    })
+    if (values.json) process.stdout.write(JSON.stringify(r, null, 2) + '\n')
+    else if (r.dryRun) {
+      console.log(`# dry-run · ${r.accession} · ${r.total} 个文件`)
+      console.log(`输出：${r.outDir}`)
+      for (const u of r.urls) console.log(`- ${u}`)
+      console.log('\n加 --yes 才会下载。')
+    } else {
+      console.log(`# ${r.accession} · ${r.outDir}`)
+      for (const x of r.items) console.log(x.ok ? `✓ ${x.path} · ${x.bytes} bytes · ${x.sha256.slice(0, 12)}…` : `✗ ${x.url}：${x.error}`)
     }
     return r.ok ? 0 : 1
   }

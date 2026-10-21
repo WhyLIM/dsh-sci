@@ -28,10 +28,11 @@ const ACC = [
 ]
 
 function uniq(xs) { return [...new Set(xs.filter(Boolean))] }
+function explicitList(x) { return String(x ?? '').split(/[,;，]/).map((v) => v.trim()).filter(Boolean) }
 function cacheFile(key) { return path.join(PATHS.annotations, `${key}.json`) }
 function hashKey(s) { return crypto.createHash('sha1').update(String(s)).digest('hex').slice(0, 16) }
 
-export function extractCandidates({ text = '', title = '', keywords = [], genes = [] } = {}) {
+export function extractCandidates({ text = '', title = '', keywords = [], genes = [], mesh = [], diseases = [], drugs = [] } = {}) {
   const body = `${title}\n${text}`
   const explicit = String(genes ?? '').split(/[,;，]/).map((x) => x.trim()).filter(Boolean)
   const tokens = []
@@ -42,6 +43,9 @@ export function extractCandidates({ text = '', title = '', keywords = [], genes 
     tokens.push(m)
   }
   const candidates = uniq([...explicit, ...tokens]).slice(0, 12)
+  const diseaseRe = /\b(disease|syndrome|disorder|cancer|carcinoma|neoplas|tumou?r|infection|deficiency|failure|injury|fibrosis|diabetes|hypertension|stroke|asthma|arthritis|dementia|sepsis|malaria|tuberculosis|infarction|ischemia|ischaemia|haemorrhage|hemorrhage|edema|oedema|lesion)\b/i
+  const diseaseHints = uniq([...explicitList(diseases), ...(mesh ?? []).filter((m) => diseaseRe.test(String(m)))]).slice(0, 4)
+  const drugHints = uniq(explicitList(drugs)).slice(0, 4)
   const accessions = []
   for (const [db, re] of ACC) for (const m of body.match(re) ?? []) accessions.push({ db, id: m.toUpperCase() })
   const rsids = uniq((body.match(RS) ?? []).map((x) => x.toLowerCase()))
@@ -52,6 +56,8 @@ export function extractCandidates({ text = '', title = '', keywords = [], genes 
   }
   return {
     genes: candidates,
+    diseases: diseaseHints,
+    drugs: drugHints,
     accessions: uniq(accessions.map((x) => `${x.db}:${x.id}`)).map((x) => { const [db, ...r] = x.split(':'); return { db, id: r.join(':') } }),
     rsids,
     hgvs,
@@ -111,6 +117,17 @@ async function accessionAnnotations(acc) {
   return r.ok && r.items?.length ? [{ db: acc.db, fields: r.items.slice(0, 2) }] : []
 }
 
+async function diseaseAnnotations(term) {
+  const r = await databaseSearch('monarch', term, { limit: 3 })
+  const x = (r.ok ? (r.items ?? []) : []).find((i) => /disease/i.test(String(i.category ?? '')) || /^MONDO:/i.test(String(i.id ?? '')))
+  return x ? [{ db: 'monarch', fields: { id: x.id, name: x.name, category: x.category, description: x.description } }] : []
+}
+async function drugAnnotations(term) {
+  const r = await databaseSearch('chebi', term, { limit: 3 })
+  const x = r.ok ? (r.items ?? [])[0] : null
+  return x ? [{ db: 'chebi', fields: { id: x.id, name: x.name, definition: x.definition } }] : []
+}
+
 async function mapLimit(items, limit, fn) {
   const out = []
   let i = 0
@@ -125,12 +142,12 @@ async function mapLimit(items, limit, fn) {
 }
 
 export async function groundPaper(paper, text = '', {
-  species = '', build = '', genes = '', maxEntities = 8, refresh = false,
+  species = '', build = '', genes = '', diseases = '', drugs = '', maxEntities = 8, refresh = false,
 } = {}) {
   const cfg = readConfig()
   species = species || cfg.researcher?.species || ''
   build = build || ''
-  const candidates = extractCandidates({ text, title: paper?.title ?? '', keywords: paper?.keywords ?? [], genes })
+  const candidates = extractCandidates({ text, title: paper?.title ?? '', keywords: paper?.keywords ?? [], genes, mesh: paper?.mesh ?? [], diseases, drugs })
   const cacheKey = hashKey(JSON.stringify({ key: paper?.key, species, build, candidates }))
   const file = cacheFile(cacheKey)
   if (!refresh) {
@@ -168,6 +185,28 @@ export async function groundPaper(paper, text = '', {
   const unresolvedHgvs = candidates.hgvs.filter((h) => !entities.some((e) => e.type === 'variant' && e.query === h))
   for (const h of unresolvedHgvs) {
     entities.push({ type: 'variant', query: h, status: 'unresolved', annotations: [], warnings: ['ClinVar 未解析该 HGVS；不要把它当作已核对变异。'] })
+  }
+
+  const diseaseIn = candidates.diseases.slice(0, limit)
+  const diseaseRows = await mapLimit(diseaseIn, 2, async (term) => {
+    const ann = await diseaseAnnotations(term)
+    return ann.length ? { type: 'disease', query: term, status: 'verified', annotations: ann, warnings: [] } : null
+  })
+  entities.push(...diseaseRows.filter(Boolean))
+  const explicitDiseases = new Set(explicitList(diseases).map((x) => x.toLowerCase()))
+  for (const d of diseaseIn.filter((x) => !diseaseRows.some((r) => r?.query === x))) {
+    if (explicitDiseases.has(d.toLowerCase())) entities.push({ type: 'disease', query: d, status: 'unresolved', annotations: [], warnings: ['未在 Monarch/Open Targets 精确解析；不要当作已核对疾病。'] })
+  }
+
+  const drugIn = candidates.drugs.slice(0, limit)
+  const drugRows = await mapLimit(drugIn, 2, async (term) => {
+    const ann = await drugAnnotations(term)
+    return ann.length ? { type: 'chemical', query: term, status: 'verified', annotations: ann, warnings: [] } : null
+  })
+  entities.push(...drugRows.filter(Boolean))
+  const explicitDrugs = new Set(explicitList(drugs).map((x) => x.toLowerCase()))
+  for (const d of drugIn.filter((x) => !drugRows.some((r) => r?.query === x))) {
+    if (explicitDrugs.has(d.toLowerCase())) entities.push({ type: 'chemical', query: d, status: 'unresolved', annotations: [], warnings: ['未在 ChEBI 精确解析；不要当作已核对药物。'] })
   }
 
   const accRows = await mapLimit(accessionsIn, 2, async (a) => {

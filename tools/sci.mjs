@@ -69,6 +69,8 @@ const OPTIONS = {
   text: { type: 'string' },
   file: { type: 'string' },
   genes: { type: 'string' },
+  diseases: { type: 'string' },
+  drugs: { type: 'string' },
   enrich: { type: 'boolean' },
   'no-enrich': { type: 'boolean' },
   kind: { type: 'string' },
@@ -114,6 +116,13 @@ const OPTIONS = {
   synonym: { type: 'boolean' },
   'no-synonym': { type: 'boolean' },
   list: { type: 'boolean' },
+  execute: { type: 'boolean' },
+  cores: { type: 'string' },
+  profile: { type: 'string' },
+  timeout: { type: 'string' },
+  'log-dir': { type: 'string' },
+  yes: { type: 'boolean' },
+  'max-bytes': { type: 'string' },
 }
 
 function help() {
@@ -139,14 +148,15 @@ function help() {
   watch                         按 ISSN watchlist 看最近论文
   db list|info|search|get       生物信息数据库 lookup（UniProt/Ensembl/PDB/GEO/...）
   entity resolve|query|accession|batch 生物实体规范化 / accession / 批量
-  dataset search|get|files      GEO/SRA/ENA/PRIDE/HCA 数据集聚合 / 文件列表
-  omics inspect                 VCF/BED/FASTA/FASTQ/GTF/10x 文件检查
+  dataset search|get|files|download GEO/SRA/ENA/PRIDE/HCA 聚合 / 文件 / 下载
+  omics inspect                 VCF/BED/FASTA/FASTQ/GTF/10x/BAM/CRAM/HDF5 检查
   repro --id|--file            数据/代码可用性抽取
   qc --id|--file|--text        统计/ML 静态风险提示
+  workflow inspect|validate|run  本地 Nextflow/Snakemake/WDL 检查与执行
   graph build|query|stats|html 本地证据图
   entity batch --file ids.txt  批量实体规范化
   benchmark --id               从缓存表格抽 benchmark
-  methods draft --id           生成 Methods 草稿
+  methods validate|draft --id  Methods 校验 / 草稿（generic/nature/jama/bmj）
   compliance --id|--file       受控数据合规检查
   topic add --path <dir|file>   引入本地研究课题（或 --repo GitHub URL）
   topic list|show|set|refresh   管理研究课题
@@ -160,6 +170,12 @@ function help() {
   --limit 10          每个源取多少
   --page 2            数据库搜索翻页（ChEBI / DailyMed）
   --all               数据库搜索取完所有页（仅 ChEBI / DailyMed）
+  --execute           工作流实际执行（需再给 --yes）
+  --yes               确认下载或执行
+  --max-bytes <n>     单文件最大字节数（默认 2GB）
+  --cores 4           工作流 CPU 数
+  --profile <name>    Nextflow profile
+  --timeout 600       工作流超时秒数
   --source europepmc,pubmed,openalex
   --oa-only           发现阶段只要开放获取（默认按配置；阅读阶段始终 OA）
   --no-cache          绕过本地缓存
@@ -195,7 +211,7 @@ async function main() {
     strict: false,
   })
   if (values.version) {
-    console.log('dsh-sci 0.9.3')
+    console.log('dsh-sci 0.9.4')
     return 0
   }
   const cmd = positionals[0]
@@ -247,6 +263,7 @@ async function main() {
     datasets: './commands/datasets.mjs',
     database: './commands/db.mjs',
     topics: './commands/topics.mjs',
+    workflow: './commands/workflow.mjs',
     topic: './commands/topics.mjs',
   }
   const file = table[cmd]

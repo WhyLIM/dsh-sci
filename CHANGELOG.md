@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4
+
+- Add Nextflow/Snakemake/WDL inspection, validation and guarded execution.
+- Add dataset download with resume, SHA256, size limits and explicit confirmation.
+- Add Methods validation/journal structure and Benchmark validation.
+- Add MeSH-based disease candidates and explicit drug grounding.
+- Make graph HTML interactive (search, type filter, zoom, node selection).
+
 ## 0.9.3
 
 - Add dataset file listing for GEO, SRA/ENA and PRIDE.

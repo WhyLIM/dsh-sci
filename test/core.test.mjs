@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import zlib from 'node:zlib'
+import http from 'node:http'
 
 import {
   invertedToText, normalizeTitle, titleKey, dedupePapers, scorePaper,
@@ -24,6 +25,9 @@ import { qcText } from '../tools/lib/qc.mjs'
 import { detectAccession } from '../tools/lib/entities.mjs'
 import { extractBenchmark } from '../tools/lib/benchmark.mjs'
 import { graphHtml } from '../tools/lib/graph.mjs'
+import { validateMethods, journalFormat } from '../tools/lib/methods.mjs'
+import { detectWorkflow, planWorkflow } from '../tools/lib/workflow.mjs'
+import { downloadUrl } from '../tools/lib/datasets.mjs'
 import { inspectOmics } from '../tools/lib/omics.mjs'
 import { extractCandidates } from '../tools/lib/annotations.mjs'
 
@@ -255,6 +259,8 @@ test('bioinformatics P0-P2 primitives', async () => {
   const b = extractBenchmark([{ label: 'T1', markdown: '| Dataset | Method | Accuracy |\n|---|---|---|\n| D1 | M1 | 0.9 |' }])
   assert.equal(b.tables[0].metricColumns[0], 'Accuracy')
   assert.equal(b.tables[0].rows[0].Dataset, 'D1')
+  assert.ok(['low', 'medium'].includes(b.validation.confidence))
+  assert.ok(b.validation.numeric >= 1)
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-omics-'))
   const vcf = path.join(dir, 'test.vcf')
@@ -300,6 +306,52 @@ test('public database normalizers keep verified fields', () => {
   assert.equal(d.version, 3)
 })
 
+test('download resumes a range and writes sha256', async () => {
+  const body = Buffer.from('abcdefghij')
+  const server = http.createServer((req, res) => {
+    const range = String(req.headers.range ?? '')
+    const m = range.match(/bytes=(\d+)-/)
+    if (m) {
+      const start = Number(m[1])
+      res.writeHead(206, { 'content-range': `bytes ${start}-${body.length - 1}/${body.length}`, 'content-length': body.length - start })
+      res.end(body.subarray(start))
+    } else {
+      res.writeHead(200, { 'content-length': body.length })
+      res.end(body)
+    }
+  })
+  await new Promise((r) => server.listen(0, '127.0.0.1', r))
+  try {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-dl-'))
+    const dest = path.join(dir, 'part.bin')
+    fs.writeFileSync(`${dest}.part`, body.subarray(0, 4))
+    const r = await downloadUrl(`http://127.0.0.1:${server.address().port}/part.bin`, dest, { maxBytes: 100 })
+    assert.equal(r.resumed, true)
+    assert.equal(fs.readFileSync(dest).toString(), 'abcdefghij')
+    assert.equal(r.sha256, '72399361da6a7754fec986dca5b7cbaf1c810a28ded4abaf56b2106d06cb78b0')
+  } finally { server.close() }
+})
+
+test('workflow detection builds a safe argv plan', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-wf-'))
+  fs.writeFileSync(path.join(dir, 'main.nf'), 'nextflow.enable.dsl=2\n')
+  const d = detectWorkflow(dir)
+  assert.equal(d.entries[0].kind, 'nextflow')
+  const p = planWorkflow(dir, { dryRun: true, cores: 2 })
+  assert.equal(p.cmd, 'nextflow')
+  assert.equal(p.args[0], 'run')
+  assert.ok(p.args.includes('-preview'))
+})
+
+test('methods validation and journal structure', () => {
+  const v = validateMethods('# Methods draft\n\n## Study design\n- 未记录\n\n## Data\n\n## Methods\n\n## Limitations')
+  assert.equal(v.confidence, 'none')
+  assert.ok(v.warnings.some((w) => w.includes('accession')))
+  const j = journalFormat('## Study design\n## Data\n## Methods', 'jama')
+  assert.match(j, /Study design, setting, and participants/)
+  assert.match(j, /Statistical analysis/)
+})
+
 test('graph HTML escapes labels and includes edges', () => {
   const html = graphHtml({ nodes: [{ id: 'paper:x', type: 'paper', label: '<b>Paper</b>' }], edges: [{ from: 'paper:x', to: 'dataset:Y', type: 'uses_dataset' }], builtAt: '2026-01-01' })
   assert.match(html, /&lt;b&gt;Paper&lt;\/b&gt;/)
@@ -316,6 +368,10 @@ test('database grounding candidates are explicit/ID based', () => {
   const h = extractCandidates({ text: 'NM_000546.6:c.818G>A and chr17:7675087 A>G' })
   assert.equal(h.hgvs[0], 'NM_000546.6:c.818G>A')
   assert.equal(h.genomic.length > 0, true)
+  const md = extractCandidates({ mesh: ['Myocardial Infarction', 'Humans'], diseases: 'heart failure', drugs: 'aspirin' })
+  assert.ok(md.diseases.includes('Myocardial Infarction'))
+  assert.ok(md.diseases.includes('heart failure'))
+  assert.deepEqual(md.drugs, ['aspirin'])
 })
 
 test('classify input forms', () => {

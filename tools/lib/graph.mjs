@@ -94,15 +94,66 @@ function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 }
 export function graphHtml(g) {
-  const nodes = (g.nodes ?? []).map((n) => `<li><b>${esc(n.type)}</b> <code>${esc(n.id)}</code> — ${esc(n.label)}</li>`).join('\n')
-  const edges = (g.edges ?? []).map((e) => `<li><code>${esc(e.from)}</code> → <code>${esc(e.to)}</code> <span>${esc(e.type)}</span></li>`).join('\n')
+  const nodes = (g.nodes ?? []).map((n) => `<li class="node" data-id="${esc(n.id)}" data-type="${esc(n.type)}" data-q="${esc(`${n.id} ${n.label} ${n.type}`.toLowerCase())}"><b>${esc(n.type)}</b> <code>${esc(n.id)}</code> — ${esc(n.label)}</li>`).join('\n')
+  const edges = (g.edges ?? []).map((e) => `<li class="edge" data-from="${esc(e.from)}" data-to="${esc(e.to)}"><code>${esc(e.from)}</code> → <code>${esc(e.to)}</code> <span>${esc(e.type)}</span></li>`).join('\n')
   return `<!doctype html>
 <html lang="zh"><meta charset="utf-8"><title>dsh-sci evidence graph</title>
-<style>body{font:14px system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#20252b}code{background:#f3f5f7;padding:.1em .3em;border-radius:4px}li{margin:.35rem 0}span{color:#667}section{margin-top:2rem}</style>
+<style>
+body{font:14px system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#20252b}
+code{background:#f3f5f7;padding:.1em .3em;border-radius:4px}li{margin:.35rem 0}span{color:#667}
+section{margin-top:2rem}.bar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:1rem 0}
+input,select,button{font:inherit;padding:.35rem .5rem}button{cursor:pointer}
+#canvas{transform-origin:top left}.hide{display:none}.node{cursor:pointer;padding:.2rem .35rem;border-radius:5px}
+.node.selected{background:#fff3bf}.edge.selected{background:#e7f5ff}
+</style>
 <h1>dsh-sci evidence graph</h1>
 <p>${g.nodes?.length ?? 0} nodes · ${g.edges?.length ?? 0} edges · built ${esc(g.builtAt ?? '—')}</p>
-<section><h2>Nodes</h2><ul>${nodes}</ul></section>
-<section><h2>Edges</h2><ul>${edges}</ul></section>
+<div class="bar">
+  <input id="q" placeholder="搜索节点 / 类型 / ID">
+  <select id="type"><option value="">全部类型</option>${[...new Set((g.nodes ?? []).map((n) => n.type))].sort().map((t) => `<option>${esc(t)}</option>`).join('')}</select>
+  <button id="reset">重置</button><button id="zoom-in">放大</button><button id="zoom-out">缩小</button>
+  <span id="count"></span>
+</div>
+<div id="canvas">
+<section><h2>Nodes</h2><ul id="nodes">${nodes}</ul></section>
+<section><h2>Edges</h2><ul id="edges">${edges}</ul></section>
+</div>
+<script>
+(() => {
+  const nodes = [...document.querySelectorAll('#nodes .node')];
+  const edges = [...document.querySelectorAll('#edges .edge')];
+  const q = document.querySelector('#q'), type = document.querySelector('#type'), count = document.querySelector('#count'), canvas = document.querySelector('#canvas');
+  let selected = '', scale = 1;
+  const render = () => {
+    const term = q.value.trim().toLowerCase(), t = type.value;
+    let shown = 0;
+    for (const n of nodes) {
+      const ok = (!term || n.dataset.q.includes(term)) && (!t || n.dataset.type === t);
+      n.classList.toggle('hide', !ok); if (ok) shown++;
+    }
+    let edgeCount = 0;
+    for (const e of edges) {
+      const ok = (!t || nodes.some(n => n.dataset.id === e.dataset.from && !n.classList.contains('hide')) || nodes.some(n => n.dataset.id === e.dataset.to && !n.classList.contains('hide')));
+      const linked = !selected || e.dataset.from === selected || e.dataset.to === selected;
+      const show = ok && linked;
+      e.classList.toggle('hide', !show); if (show) edgeCount++;
+    }
+    count.textContent = shown + ' nodes · ' + edgeCount + ' edges';
+  };
+  const zoom = (d) => { scale = Math.min(2, Math.max(.5, scale + d)); canvas.style.transform = 'scale(' + scale + ')'; };
+  q.addEventListener('input', render); type.addEventListener('change', render);
+  document.querySelector('#reset').addEventListener('click', () => { q.value = ''; type.value = ''; selected = ''; scale = 1; canvas.style.transform = ''; nodes.forEach(n => n.classList.remove('selected')); render(); });
+  document.querySelector('#zoom-in').addEventListener('click', () => zoom(.1));
+  document.querySelector('#zoom-out').addEventListener('click', () => zoom(-.1));
+  for (const n of nodes) n.addEventListener('click', () => {
+    selected = selected === n.dataset.id ? '' : n.dataset.id;
+    nodes.forEach(x => x.classList.toggle('selected', x.dataset.id === selected));
+    edges.forEach(e => e.classList.toggle('selected', e.dataset.from === selected || e.dataset.to === selected));
+    render();
+  });
+  render();
+})();
+</script>
 </html>
 `
 }
