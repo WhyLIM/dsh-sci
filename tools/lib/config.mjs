@@ -58,6 +58,7 @@ export const DEFAULTS = {
   sources: {
     openalex: true,
     arxiv: false,
+    biorxiv: true,
     europepmc: true,
     pubmed: true,
     crossref: false,
@@ -234,6 +235,7 @@ export function sanitizeConfig(input) {
     sources: {
       openalex: bool(s.openalex, d.sources.openalex),
       arxiv: bool(s.arxiv, d.sources.arxiv),
+      biorxiv: bool(s.biorxiv, d.sources.biorxiv),
       europepmc: bool(s.europepmc, d.sources.europepmc),
       pubmed: bool(s.pubmed, d.sources.pubmed),
       crossref: bool(s.crossref, d.sources.crossref),

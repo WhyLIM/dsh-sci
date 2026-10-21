@@ -15,7 +15,7 @@ window.__ModuleLoader__.load({
     const ZH = {
       nav: '科研',
       title: '科研',
-      intro: '让 DSH 像生物医学博士生一样扫文献、读全文、写笔记。Europe PMC + PubMed 为主，含 PICO、研究类型与撤稿安全、表格/图、引文追踪与筛选导出。',
+      intro: '让 DSH 像生物医学博士生一样扫文献、读全文、写笔记。Europe PMC + PubMed + bioRxiv 为主，含 PICO、研究类型与撤稿安全、表格/图、引文追踪与筛选导出。',
       save: '保存设置',
       unsavedTitle: '还有未保存的设置',
       unsavedBody: '关闭设置页前要保存吗？不保存的修改会丢失。',
@@ -550,7 +550,7 @@ window.__ModuleLoader__.load({
       const keyBox = secretBox(t('openalexKey'), t('openalexKeyHint'), 'openalexApiKey', keyInput, setKeyInput, saveKey, clearKey, 'key')
       return h('div', null,
         h('div', { className: 'sci-group' }, t('sources')),
-        h('div', { className: 'sci-hint', style: { marginBottom: 8 } }, 'Europe PMC + PubMed 是生物医学主力；OpenAlex 补跨学科；ClinicalTrials.gov 补注册信息。每个源的邮箱/API 设置直接放在对应源下。'),
+        h('div', { className: 'sci-hint', style: { marginBottom: 8 } }, 'Europe PMC + PubMed 是生物医学主力；bioRxiv 补生命科学预印本；OpenAlex 补跨学科；ClinicalTrials.gov 补注册信息。每个源的邮箱/API 设置直接放在对应源下。'),
         box('europepmc', 'Europe PMC', 'PubMed/PMC + 预印本；开放全文 XML；无需 key'),
         box('pubmed', 'PubMed', 'MeSH/[tiab]/[pt] 字段检索；配置 key 后 10 请求/秒', h('div', null,
           emailField('pubmed', t('pubmedEmail')),
@@ -560,6 +560,7 @@ window.__ModuleLoader__.load({
           keyBox)),
         box('clinicaltrials', 'ClinicalTrials.gov', '试验注册信息；brief 会附相关试验'),
         box('crossref', 'Crossref', 'DOI 权威元数据；摘要覆盖一般，默认关', emailField('crossref', t('crossrefEmail'))),
+        box('biorxiv', 'bioRxiv', '生命科学预印本；默认开启；临床模式仍按预印本策略过滤'),
         box('arxiv', 'arXiv', '预印本；临床模式默认关'),
         h('div', { className: 'sci-group' }, t('unpaywall')),
         h('div', { className: 'sci-hint', style: { marginBottom: 6 } }, '用 DOI 找合法 OA 版本；需要邮箱。'),

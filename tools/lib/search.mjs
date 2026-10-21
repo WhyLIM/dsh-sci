@@ -19,6 +19,7 @@ import {
 } from './normalize.mjs'
 import { searchOpenAlex } from './sources/openalex.mjs'
 import { searchArxiv } from './sources/arxiv.mjs'
+import { searchBiorxiv } from './sources/biorxiv.mjs'
 import { searchEuropePmc } from './sources/europepmc.mjs'
 import { searchCrossref } from './sources/crossref.mjs'
 import { searchPubmed } from './sources/pubmed.mjs'
@@ -27,7 +28,7 @@ import { excludedKeys } from './screening.mjs'
 import { topicQueries, topicKeywords, topicTitles } from './topics.mjs'
 import { queryForLog } from './privacy.mjs'
 
-const PAPER_SOURCES = ['openalex', 'arxiv', 'europepmc', 'pubmed', 'crossref']
+const PAPER_SOURCES = ['openalex', 'arxiv', 'biorxiv', 'europepmc', 'pubmed', 'crossref']
 
 export function enabledSources(cfg = readConfig()) {
   return Object.entries(cfg.sources)
@@ -94,6 +95,9 @@ export async function searchAll({
   if (names.includes('arxiv')) {
     jobs.push(searchArxiv({ query, days, limit: perSource, bypassCache }))
   }
+  if (names.includes('biorxiv')) {
+    jobs.push(searchBiorxiv({ query, days, limit: perSource, bypassCache }))
+  }
   if (names.includes('europepmc')) {
     jobs.push(searchEuropePmc({
       query, days, limit: perSource, oaOnly: discoveryOAOnly,
@@ -130,7 +134,7 @@ export async function searchAll({
       total: r.value.total,
       query: r.value.query ?? '',
       error: r.value.error ?? null,
-      hint: r.value.hint ?? '',
+      hint: r.value.hint ?? r.value.warning ?? '',
     })
   }
   const deduped = dedupePapers(papers)

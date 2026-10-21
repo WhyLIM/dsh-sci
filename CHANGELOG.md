@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.7
+
+- Add bioRxiv as a default-enabled preprint source with local title/abstract filtering.
+
 ## 0.9.6
 
 - Add PubTator 3 gene/disease/chemical/variant candidate annotations.

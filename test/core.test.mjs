@@ -28,6 +28,7 @@ import { graphHtml } from '../tools/lib/graph.mjs'
 import { validateMethods, journalFormat } from '../tools/lib/methods.mjs'
 import { detectWorkflow, planWorkflow } from '../tools/lib/workflow.mjs'
 import { normalizePubtator, pubtatorHints } from '../tools/lib/pubtator.mjs'
+import { parseBiorxivItem } from '../tools/lib/sources/biorxiv.mjs'
 import { downloadUrl } from '../tools/lib/datasets.mjs'
 import { inspectOmics } from '../tools/lib/omics.mjs'
 import { extractCandidates } from '../tools/lib/annotations.mjs'
@@ -217,6 +218,7 @@ test('output/execution/topics/source options sanitize', () => {
   assert.equal(sanitizeConfig({ schedule: { mode: 'manual' } }).schedule.mode, 'manual')
   assert.deepEqual(c.topics.selected, ['a', 'b'])
   assert.equal(c.topics.maxQueries, 5)
+  assert.equal(c.sources.biorxiv, true)
   assert.equal(c.sources.options.pubmed.email, 'p@example.com')
   assert.equal(c.sources.options.openalex.email, '')
   assert.equal(outputPaths(c).root.startsWith('/'), true)
@@ -331,6 +333,15 @@ test('download resumes a range and writes sha256', async () => {
     assert.equal(fs.readFileSync(dest).toString(), 'abcdefghij')
     assert.equal(r.sha256, '72399361da6a7754fec986dca5b7cbaf1c810a28ded4abaf56b2106d06cb78b0')
   } finally { server.close() }
+})
+
+test('bioRxiv items normalize as preprints', () => {
+  const p = parseBiorxivItem({ doi: '10.1101/2026.01.01.123456', title: 'A bioRxiv paper', authors: 'A; B', date: '2026-01-01', version: '2', abstract: 'Abstract', category: 'neuroscience' })
+  assert.equal(p.id, 'biorxiv:10.1101/2026.01.01.123456')
+  assert.equal(p.isPreprint, true)
+  assert.equal(p.venue, 'bioRxiv')
+  assert.equal(p.authors.length, 2)
+  assert.match(p.url, /v2$/)
 })
 
 test('PubTator normalization deduplicates and separates entity types', () => {

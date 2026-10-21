@@ -84,6 +84,16 @@ export async function run({ values }) {
     })())
   } else add('arXiv', true, '未启用')
 
+  if (cfg.sources.biorxiv) {
+    const from = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10)
+    const to = new Date().toISOString().slice(0, 10)
+    try {
+      const r = await probe(`https://api.biorxiv.org/details/biorxiv/${from}/${to}/0`, 20_000)
+      add('bioRxiv', r.ok, r.ok ? '公开 API 可用（无需 key）' : `${r.status} ${r.error ?? ''}`.trim())
+    } catch (e) {
+      add('bioRxiv', false, String(e?.message ?? e))
+    }
+  } else add('bioRxiv', true, '未启用')
   if (cfg.sources.europepmc) {
     probes.push((async () => {
       try {
@@ -152,7 +162,7 @@ export async function run({ values }) {
   add('API key', true, `OpenAlex: ${secretsState.openalexApiKey ? '已设置' : '未设置'} · Unpaywall 邮箱: ${secretsState.unpaywallEmail ? '已设置' : '未设置'}`)
 
   const core = items.filter((i) => ['Node.js', '数据目录', '输出目录'].includes(i.name))
-  const sources = items.filter((i) => ['OpenAlex', 'arXiv', 'Europe PMC', 'PubMed', 'Crossref', 'ClinicalTrials.gov'].includes(i.name))
+  const sources = items.filter((i) => ['OpenAlex', 'arXiv', 'bioRxiv', 'Europe PMC', 'PubMed', 'Crossref', 'ClinicalTrials.gov'].includes(i.name))
   const configured = sources.filter((i) => i.detail !== '未启用')
   const coreOk = core.every((i) => i.ok)
   const anySource = configured.some((i) => i.ok)

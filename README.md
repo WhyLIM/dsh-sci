@@ -135,6 +135,7 @@ DSH 自动化任务按准确时间触发，不支持随机延迟或跳过。周�
 | 来源 | 默认 | 用途 |
 |---|---|---|
 | Europe PMC | 开 | 生物医学题录、PMC 全文、预印本 |
+| bioRxiv | 开 | 生命科学预印本；按日期区间读取，再在本地按标题/摘要过滤 |
 | PubMed | 开 | 使用 PubMed 官方检索接口；支持字段标签和研究类型 |
 | OpenAlex | 开 | 跨学科题录和引用信息 |
 | Crossref | 关 | DOI 元数据 |
@@ -227,7 +228,7 @@ node --check scheduler.js
 find tools -name '*.mjs' -print0 | xargs -0 -n1 node --check
 ```
 
-`npm test` 运行 34 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
+`npm test` 运行 35 项测试，其中 1 项实时数据库检查默认跳过。设置 `DSH_SCI_LIVE_TESTS=1` 后运行 `npm run test:live`，会检查公开数据库的真实响应；GitHub Actions 不运行这项网络测试。
 
 主要文件：
 
